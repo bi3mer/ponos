@@ -40,5 +40,7 @@ def main():
     res = G.completability(lvl)
     print(res)
 
+
+
 if __name__ == '__main__':
     main()
