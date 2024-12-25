@@ -26,7 +26,18 @@ def main():
         exit(1)
 
     G = Game(server, json.loads(config_request.content))
-    res = G.completability(["a", "b"])
+    lvl = [
+        'X-------------',
+        'X-------------',
+        'X-------------',
+        'X-------------',
+        'X-------------',
+        'X-------------',
+        'X-------------',
+        'X-------------',
+        'X-------------',
+    ]
+    res = G.completability(lvl)
     print(res)
 
 if __name__ == '__main__':

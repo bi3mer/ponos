@@ -1,6 +1,7 @@
 from typing import Dict, Any, List
 from random import seed
 from requests import get
+from json import dumps
 
 class Game:
     def __init__(self, server: str, json_data: Dict[str, Any]):
@@ -17,7 +18,7 @@ class Game:
            seed(json_data['seed'])
 
     def completability(self, level: List[str]) -> float:
-        c_request = get(self.completability_endpoint, params={'lvl': level})
+        c_request = get(self.completability_endpoint, params={'lvl': dumps(level)})
         if c_request.status_code != 200:
             print(f"'{self.completability_endpoint}' endpoint returned status code: {c_request.status_code}")
             exit(1)
