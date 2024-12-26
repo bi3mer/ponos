@@ -46,14 +46,9 @@ def main():
         'X-------------',
     ]
 
-    print(G.computational_metrics(lvl))
-
-
-    # Gram-Elites
-    # map_elites = MapElites(
-    #     G.start_population_size,
-
-    # )
+    # Gram-Elites level segment generation
+    map_elites = MapElites(G)
+    map_elites.run()
 
     # Linking
 

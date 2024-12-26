@@ -1,34 +1,29 @@
-from Utility.GridTools import columns_into_rows
 from Utility import update_progress
-from random import seed, sample
+from random import sample
 from functools import reduce
 from math import floor
 from heapq import heappush
+from Game import Game
+
+import Operators
 
 class MapElites:
     '''
     This is the more basic form of map-elites without resolution switching,
     parallel execution, etc.
     '''
-    def __init__(
-        self, start_population_size, feature_descriptors, feature_dimensions,
-        resolution, performance, minimize_performance,
-        population_generator, mutator, crossover, elites_per_bin, rng_seed=None):
+    def __init__(self, G: Game):
+        if G.use_ngram_operators:
+            self.crossover: Operators.ICrossover = Operators.NGramCrossover(G)
+            self.mutate: Operators.IMutate = Operators.NGramMutate(G)
+            self.population_generator = Operators.NGramPopulationGenerator(G)
+        else:
+            self.crossover: Operators.ICrossover = Operators.SinglePointCrossover(G)
+            self.mutate: Operators.IMutate = Operators.Mutate(G)
+            self.population_generator: IPopulationGenerator =  Operators.RandomPopulationGenerator(G)
 
-        self.minimize_performance = minimize_performance
-        self.feature_descriptors = feature_descriptors
-        self.feature_dimensions = feature_dimensions
-        self.resolution = 100 / resolution # view __add_to_bins comments
-        self.performance = performance
-        self.start_population_size = start_population_size
-        self.population_generator = population_generator
-        self.crossover = crossover.operate
-        self.mutator = mutator.mutate
-        self.elites_per_bin = elites_per_bin
+        self.G: Game = G
         self.bins = {}
-
-        if rng_seed != None:
-            seed(rng_seed)
 
     def run(self, iterations):
         counts = []
@@ -37,9 +32,9 @@ class MapElites:
         self.bins = {}
         self.keys = set()
 
-        for i, strand in enumerate(self.population_generator.generate(self.start_population_size)):
+        for i, strand in enumerate(self.population_generator.generate(self.G.start_population_size)):
             self.__add_to_bins(strand)
-            update_progress(i / self.start_population_size)
+            update_progress(i / self.G.start_population_size)
             counts.append(self.current_count)
 
         for i in range(iterations):
