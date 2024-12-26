@@ -2,7 +2,8 @@ from typing import Dict, Any, List
 from json import dumps, loads
 
 from Utility.web import web_get, web_get_json
-from Utility import LevelAssessment, NGram
+from Utility.LevelAssessment import LevelAssessment
+from Utility.Ngram import NGram
 
 class Game:
     def __init__(self, server: str, json_data: Dict[str, Any]):
@@ -12,13 +13,13 @@ class Game:
 
         # json data
         self.elites_per_bin: int = json_data['elites-per-bin']
-        self.ngram_link_min_length: int = json_data['gram-elites-min-link-length']
+        self.ngram_link_min_length: int = json_data['gram-elites-max-link-length']
         self.ngram_link_max_length: int = json_data['gram-elites-max-link-length']
         self.iterations: int = json_data['iterations']
         self.max_strand_size: int = json_data['max-strand-size']
         self.start_population_size: int = json_data['start-population-size']
         self.start_strand_size: int = json_data['start-strand-size']
-        self.use_ngram_operators: bool = json_data['use-n-gram-operators']
+        self.ngram_operators: bool = json_data['n-gram-operators']
         self.metrics = json_data['computational-metrics']
 
         # set up n-grams

@@ -1,29 +1,22 @@
 #!/usr/bin/env python
 
-from Game import Game
 from Utility.web import web_get
+from GramElites.MapElites import MapElites
+from Game import Game
 
 from random import seed
 import argparse
 import json
 
-from GramElites import MapElites
-
-def get_cmd_args() -> argparse.Namespace:
-    '''
-    Build arg parser used to get command line arguments from the user
-    '''
+def main():
+    # Get server from user input
     parser = argparse.ArgumentParser(description='Ponos')
     parser.add_argument('--server', type=str, required=True, help="URL for game server.")
-
-    return parser.parse_args()
-
-def main():
-    args = get_cmd_args()
+    args = parser.parse_args()
 
     server = args.server
 
-    # Get config
+    # Get config from game server
     json_config = json.loads(web_get(f'{server}/config'))
 
     # set seed if relevant

@@ -1,11 +1,14 @@
-from Utility import update_progress
 from random import sample
 from functools import reduce
 from math import floor
 from heapq import heappush
-from Game import Game
 
-import Operators
+from Utility.ProgressBar import update_progress
+from GramElites.Operators.ICrossover import ICrossover
+from GramElites.Operators.NGramCrossover import NGramCrossover
+from GramElites.Operators.NGramMutate import NGramMutate
+from GramElites.Operators.NGramPopulationGenerator import NGramPopulationGenerator
+from Game import Game
 
 class MapElites:
     '''
@@ -13,31 +16,35 @@ class MapElites:
     parallel execution, etc.
     '''
     def __init__(self, G: Game):
-        if G.use_ngram_operators:
-            self.crossover: Operators.ICrossover = Operators.NGramCrossover(G)
-            self.mutate: Operators.IMutate = Operators.NGramMutate(G)
-            self.population_generator = Operators.NGramPopulationGenerator(G)
+        if G.ngram_operators:
+            self.crossover: ICrossover = NGramCrossover(G)
+            # self.mutate: Operators.IMutate = Operators.NGramMutate(G)
+            self.population_generator = NGramPopulationGenerator(G)
         else:
-            self.crossover: Operators.ICrossover = Operators.SinglePointCrossover(G)
-            self.mutate: Operators.IMutate = Operators.Mutate(G)
-            self.population_generator: IPopulationGenerator =  Operators.RandomPopulationGenerator(G)
+            print('Non n-gram operators not supported right now...')
+            exit(1)
+            # self.crossover: ICrossover = Operators.SinglePointCrossover(G)
+            # self.mutate: Operators.IMutate = Operators.Mutate(G)
+            # self.population_generator: IPopulationGenerator =  Operators.RandomPopulationGenerator(G)
 
         self.G: Game = G
         self.bins = {}
 
-    def run(self, iterations):
+    def run(self):
         counts = []
         self.current_count = 0
 
         self.bins = {}
         self.keys = set()
 
+        update_progress(0)
         for i, strand in enumerate(self.population_generator.generate(self.G.start_population_size)):
             self.__add_to_bins(strand)
             update_progress(i / self.G.start_population_size)
             counts.append(self.current_count)
 
-        for i in range(iterations):
+        update_progress(0)
+        for i in range(self.G.iterations):
             parent_1 = sample(self.bins[sample(self.keys, 1)[0]], 1)[0][1]
             parent_2 = sample(self.bins[sample(self.keys, 1)[0]], 1)[0][1]
 
@@ -69,22 +76,20 @@ class MapElites:
         if strand == None:
             return
 
-        fitness = self.performance(strand)
-        feature_vector = [score(strand) for score in self.feature_descriptors]
+        # Get assessment and calculate fitness
+        assessment = self.G.assess(strand)
+        fitness = self.G.ngram.count_bad_n_grams(strand) + 1 - assessment.percent_completable
 
-        for i in range(len(self.feature_dimensions)):
-            minimum, maximum = self.feature_dimensions[i]
-            unclamped_score = feature_vector[i]
+        # Calculate the feature vector based on computational metrics
+        feature_vector = [0] * len(assessment.metrics)
+        for i in range(len(assessment.metrics)):
+            D = self.G.metrics[i]
+            min = D['min']
+            max = D['max']
+            score_in_range = (assessment.metrics[i] - min) * 100 / (max - min)
+            feature_vector[i] = floor(score_in_range / D['resolution'])
 
-            if unclamped_score < minimum or unclamped_score > maximum:
-                print(f'Warning: clamping score, {minimum} <= {unclamped_score} <= {maximum}')
-                score = max(minimum, min(maximum, feature_vector[i]))
-            else:
-                score = unclamped_score
-
-            score_in_range = (score - minimum) * 100 / (maximum - minimum)
-            feature_vector[i] = floor(score_in_range / self.resolution)
-
+        # Convert feature vector to tuple and use as a key into the bins dictionary
         feature_vector = tuple(feature_vector)
         if feature_vector not in self.bins:
             self.keys.add(feature_vector)
@@ -95,11 +100,8 @@ class MapElites:
         else:
             current_length = self.__iterator_size((filter(lambda entry: entry[0] == 0.0, self.bins[feature_vector])))
             heappush(self.bins[feature_vector], (fitness, strand))
-            if len(self.bins[feature_vector]) >= self.elites_per_bin:
-                if self.minimize_performance:
-                    self.bins[feature_vector].pop()
-                else:
-                    self.bins[feature_vector].pop(0)
+            if len(self.bins[feature_vector]) >= self.G.elites_per_bin:
+                self.bins[feature_vector].pop() # only minimize performance
 
             new_length = self.__iterator_size(filter(lambda entry: entry[0] == 0.0, self.bins[feature_vector]))
             self.current_count += new_length - current_length
