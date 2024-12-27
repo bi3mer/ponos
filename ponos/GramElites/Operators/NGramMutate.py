@@ -10,7 +10,7 @@ class NGramMutate(IMutate):
     def __init__(self, G: Game):
         self.G = G
 
-    def mutate(self, strand: List[str]) -> List[str]:
+    def operate(self, strand: List[str]) -> List[str]:
         if random() < self.G.mutation_rate:
             point = randrange(self.G.ngram.n - 1, len(strand) - self.G.ngram.n - 1)
             start =  strand[:point]

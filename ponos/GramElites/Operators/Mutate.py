@@ -6,7 +6,7 @@ from .IMutate import IMutate
 class Mutate(IMutate):
     __slots__ = ['mutation_values', 'mutation_rate']
 
-    def __init__(self, mutation_values, mutation_rate):
+    def operate(self, mutation_values, mutation_rate):
         self.mutation_values = mutation_values
         self.mutation_rate = mutation_rate
 
@@ -15,5 +15,5 @@ class Mutate(IMutate):
     def mutate(self, strand: List[str]) -> List[str]:
         if random() < self.mutation_rate:
             strand[randrange(0, len(strand))] = choice(self.mutation_values)
-        
+
         return strand

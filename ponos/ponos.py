@@ -1,3 +1,5 @@
+from ast import Index
+from genericpath import isdir
 #!/usr/bin/env python
 
 from Utility.web import web_get
@@ -7,13 +9,16 @@ from Game import Game
 from random import seed
 from time import time
 import argparse
+import shutil
 import json
+import os
 
 def main():
     # Get server from user input
     parser = argparse.ArgumentParser(description='Ponos')
     parser.add_argument('--server', type=str, help="URL, ideally 127.0.0.1:[PORT] for game server.")
     parser.add_argument('--socket', type=str, help="URL for web socket.")
+    parser.add_argument('--model-name', type=str, help="Name of file for resulting pickle file (don't include extension).", required=True)
     args = parser.parse_args()
 
     if args.socket == None and args.server == None:
@@ -28,6 +33,22 @@ def main():
 
     server = args.server
 
+    # Make sure file won't be overwritten
+    # TODO: handle extension
+    mdl_name = args.model_name
+    if os.path.exists(mdl_name + '.pkl'):
+        index = 0
+        new_name = f'{mdl_name}_{index}.pkl'
+        while os.path.exists(new_name):
+            index += 1
+            new_name = f'{mdl_name}_{index}'
+
+        mdl_name = new_name
+    else:
+        mdl_name += '.pkl'
+
+    print(f'Result will be stored at: {mdl_name}')
+
     # Get config from game server
     json_config = json.loads(web_get(f'{server}/config'))
 
@@ -38,9 +59,13 @@ def main():
     # set up game
     G = Game(server, json_config)
 
-    # Gram-Elites level segment generation
+    ####### Gram-Elites
+    # level segment generation
     map_elites = MapElites(G)
     map_elites.run()
+
+    # store usable level segments
+
 
     # Linking
 

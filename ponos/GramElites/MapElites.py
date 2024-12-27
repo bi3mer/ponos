@@ -3,6 +3,7 @@ from math import floor
 from heapq import heappush
 
 from Utility.ProgressBar import update_progress
+from GramElites.Operators.IMutate import IMutate
 from GramElites.Operators.ICrossover import ICrossover
 from GramElites.Operators.NGramCrossover import NGramCrossover
 from GramElites.Operators.NGramMutate import NGramMutate
@@ -17,7 +18,7 @@ class MapElites:
     def __init__(self, G: Game):
         if G.ngram_operators:
             self.crossover: ICrossover = NGramCrossover(G)
-            # self.mutate: Operators.IMutate = Operators.NGramMutate(G)
+            self.mutate: IMutate = NGramMutate(G)
             self.population_generator = NGramPopulationGenerator(G)
         else:
             print('Non n-gram operators not supported right now...')
@@ -34,6 +35,7 @@ class MapElites:
         self.keys = set()
 
         ###### Population Generation
+        print('Level Generation: population generation...')
         update_progress(0)
         for i, strand in enumerate(self.population_generator.generate(self.G.start_population_size)):
             self.__add_to_bins(strand)
@@ -41,6 +43,7 @@ class MapElites:
         update_progress(1)
 
         ###### Run Map-Elites
+        print('Level Generation: segment optimization...')
         update_progress(0)
         LEN = self.G.iterations
         for i in range(LEN):
@@ -48,7 +51,7 @@ class MapElites:
             parent_2 = sample(self.bins[sample(self.keys, 1)[0]], 1)[0][1]
 
             for strand in self.crossover.operate(parent_1, parent_2):
-                self.__add_to_bins(self.mutator.operate(strand))
+                self.__add_to_bins(self.mutate.operate(strand))
                 update_progress(i / LEN)
 
         update_progress(1)

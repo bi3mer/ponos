@@ -24,7 +24,7 @@ class NGramCrossover(ICrossover):
         assert self.G.ngram.sequence_is_possible(start)
         assert self.G.ngram.sequence_is_possible(end)
 
-        p_1 = start + generate_link(self.G, start, end) + end
+        p_1 = start + generate_link(self.G, start, end, self.G.ngram_link_min_length) + end
         assert self.G.ngram.sequence_is_possible(p_1)
 
         # build second level
@@ -34,7 +34,7 @@ class NGramCrossover(ICrossover):
         assert self.G.ngram.sequence_is_possible(start)
         assert self.G.ngram.sequence_is_possible(end)
 
-        p_2 = start + generate_link(self.G, start, end) + end
+        p_2 = start + generate_link(self.G, start, end, self.G.ngram_link_min_length) + end
 
         assert self.G.ngram.sequence_is_possible(p_2)
 
