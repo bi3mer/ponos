@@ -1,5 +1,4 @@
 from random import sample
-from functools import reduce
 from math import floor
 from heapq import heappush
 
@@ -31,32 +30,28 @@ class MapElites:
         self.bins = {}
 
     def run(self):
-        counts = []
-        self.current_count = 0
-
         self.bins = {}
         self.keys = set()
 
+        ###### Population Generation
         update_progress(0)
         for i, strand in enumerate(self.population_generator.generate(self.G.start_population_size)):
             self.__add_to_bins(strand)
             update_progress(i / self.G.start_population_size)
-            counts.append(self.current_count)
+        update_progress(1)
 
+        ###### Run Map-Elites
         update_progress(0)
-        for i in range(self.G.iterations):
+        LEN = self.G.iterations
+        for i in range(LEN):
             parent_1 = sample(self.bins[sample(self.keys, 1)[0]], 1)[0][1]
             parent_2 = sample(self.bins[sample(self.keys, 1)[0]], 1)[0][1]
 
-            for strand in self.crossover(parent_1, parent_2):
-                self.__add_to_bins(self.mutator(strand))
-                update_progress(i / iterations)
-
-            counts.append(self.current_count)
+            for strand in self.crossover.operate(parent_1, parent_2):
+                self.__add_to_bins(self.mutator.operate(strand))
+                update_progress(i / LEN)
 
         update_progress(1)
-
-        return counts
 
     def __add_to_bins(self, strand):
         '''
@@ -94,17 +89,7 @@ class MapElites:
         if feature_vector not in self.bins:
             self.keys.add(feature_vector)
             self.bins[feature_vector] = [(fitness, strand)]
-
-            if fitness == 0.0:
-                self.current_count += 1
         else:
-            current_length = self.__iterator_size((filter(lambda entry: entry[0] == 0.0, self.bins[feature_vector])))
             heappush(self.bins[feature_vector], (fitness, strand))
             if len(self.bins[feature_vector]) >= self.G.elites_per_bin:
                 self.bins[feature_vector].pop() # only minimize performance
-
-            new_length = self.__iterator_size(filter(lambda entry: entry[0] == 0.0, self.bins[feature_vector]))
-            self.current_count += new_length - current_length
-
-    def __iterator_size(self, iterator):
-        return reduce(lambda sum, element: sum + 1, iterator, 0)

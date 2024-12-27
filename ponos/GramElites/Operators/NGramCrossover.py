@@ -16,7 +16,7 @@ class NGramCrossover(ICrossover):
         cross_over_point = randrange(self.G.ngram.n - 1, strand_size - self.G.ngram.n - 1)
 
         # Built first level. This operation assumes we are working with a fully-
-        # connected n-gram. Otherwise, BFS is not guranteed to find a path between
+        # connected n-gram. Otherwise, BFS is not guaranteed to find a path between
         # two random but valid priors.
         start: List[str] = parent_1[:cross_over_point]
         end: List[str] = parent_2[cross_over_point:]
@@ -32,11 +32,11 @@ class NGramCrossover(ICrossover):
         end = parent_1[cross_over_point:]
 
         assert self.G.ngram.sequence_is_possible(start)
-        assert self.G.gram.sequence_is_possible(end)
+        assert self.G.ngram.sequence_is_possible(end)
 
-        p_2 = start + generate_link(self.gram, start, end) + end
+        p_2 = start + generate_link(self.G, start, end) + end
 
         assert self.G.ngram.sequence_is_possible(p_2)
 
         # return truncated results
-        return p_1[:self.max_length], p_2[:self.max_length]
+        return p_1[:self.G.max_strand_size], p_2[:self.G.max_strand_size]

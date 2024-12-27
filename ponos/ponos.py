@@ -5,6 +5,7 @@ from GramElites.MapElites import MapElites
 from Game import Game
 
 from random import seed
+from time import time
 import argparse
 import json
 
@@ -26,19 +27,6 @@ def main():
     # set up game
     G = Game(server, json_config)
 
-    lvl = [
-        'X-------------',
-        'X-------------',
-        'X-------------',
-        'XE------------',
-        'X-------------',
-        'XX------------',
-        'X-------------',
-        'X-------------',
-        'X-------------',
-        'X-------------',
-    ]
-
     # Gram-Elites level segment generation
     map_elites = MapElites(G)
     map_elites.run()
@@ -49,4 +37,8 @@ def main():
     # Export as MDP
 
 if __name__ == '__main__':
+    start = time()
     main()
+    end = time()
+
+    print(f'Time to run: {end - start}')

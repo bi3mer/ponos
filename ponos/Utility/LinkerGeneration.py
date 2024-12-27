@@ -17,7 +17,7 @@ def generate_link(G: Game, start: List[str],end: List[str]) -> Optional[List[str
     # end is already valid, then return. However, if an agent is given, validate
     # that the agent can play through the combination before returning.
     combined = start + end
-    if G.ngram_link_min_length == 0 and G.ngram.sequence_is_possible(start + end):
+    if G.ngram_link_min_length == 0 and G.ngram.sequence_is_possible(combined):
         assessment = G.assess(combined)
         if assessment.percent_completable == 1.0:
             return []
