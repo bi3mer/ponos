@@ -57,23 +57,6 @@ class MapElites:
         update_progress(1)
 
     def __add_to_bins(self, strand):
-        '''
-        Resolution is the number of bins for each feature. Meaning if we have 2
-        features and a resolution of 2, we we will have a 2x2 matrix. We have to
-        get scores and map them to the indexes of the matrix. We get this by first
-        dividing 100 by the resolution which will be used to get an index
-        for a mapping of a minimum of 0 and a max of 100. We are given a min and
-        max for each dimension of the user. We take the given score and convert it
-        from their mappings to a min of 0 and 100. We then use that and divide the
-        result by the 100/resolution to get a float. When we floor it, we get a valid
-        index given a valid minimum and maximum from the user.
-
-        Added extra functionality to allow for additional fitness if the main fitness
-        is found to be equal to the current best fitness
-        '''
-        if strand == None:
-            return
-
         # Get assessment and calculate fitness
         assessment = self.G.assess(strand)
         fitness = self.G.ngram.count_bad_n_grams(strand) + 1 - assessment.percent_completable
@@ -82,9 +65,7 @@ class MapElites:
         feature_vector = [0] * len(assessment.metrics)
         for i in range(len(assessment.metrics)):
             M = self.G.metrics[i]
-            min = M.min
-            max = M.max
-            score_in_range = (assessment.metrics[i] - min) * 100 / (max - min)
+            score_in_range = (assessment.metrics[i] - M.min) * 100 / (M.max - M.min)
             feature_vector[i] = floor(score_in_range / M.resolution)
 
         # Convert feature vector to tuple and use as a key into the bins dictionary

@@ -1,9 +1,14 @@
+from curses import has_key
 from ast import Index
 from genericpath import isdir
 #!/usr/bin/env python
 
-from Utility.web import web_get
 from GramElites.MapElites import MapElites
+from GDM.GDM.Graph import Graph
+
+from Utility.CustomNode import CustomNode
+from Utility.CustomEdge import CustomEdge
+from Utility.web import web_get
 from Game import Game
 
 from random import seed
@@ -40,7 +45,6 @@ def main():
     server = args.server
 
     # Make sure file won't be overwritten
-    # TODO: handle extension
     mdl_name = args.model_name
     if os.path.exists(mdl_name + '.pkl'):
         index = 0
@@ -66,17 +70,43 @@ def main():
     G = Game(server, json_config)
 
     ####### Gram-Elites
-    # level segment generation
+    print('Running MAP-Elites...')
     map_elites = MapElites(G)
     map_elites.run()
 
-    # store usable level segments
+    ####### Linking
+    # Add Nodes
+    print('Adding nodes...')
+    MDP = Graph()
+    for key in map_elites.bins:
+        B = map_elites.bins[key]
+        start_name = '_'.join(str(k) for k in key)
+        for i, elite in enumerate(B):
+            # elite fitness must be 0.0 to be *usable*
+            if elite[0] == 0.0:
+                MDP.add_node(CustomNode(
+                    name = f'{start_name}_{i}',
+                    reward = 0,
+                    utility = 0,
+                    is_terminal = False,
+                    neighbors = set(),
+                    level = elite[1]
+                ))
+
+    # Add edges with no link or link if valid. Otherwise, don't add.
+    print('Linking edges...')
+    origin_node = (0, 0, 0)
+    # if MDP.has_key()
 
 
-    # Linking
+    ####### MDP
+    print('Storing result...')
+    # Add start node and death node
+
+    # export
 
 
-    # Export as MDP
+    print('DONE')
 
 if __name__ == '__main__':
     start = time()
