@@ -81,11 +81,11 @@ class MapElites:
         # Calculate the feature vector based on computational metrics
         feature_vector = [0] * len(assessment.metrics)
         for i in range(len(assessment.metrics)):
-            D = self.G.metrics[i]
-            min = D['min']
-            max = D['max']
+            M = self.G.metrics[i]
+            min = M.min
+            max = M.max
             score_in_range = (assessment.metrics[i] - min) * 100 / (max - min)
-            feature_vector[i] = floor(score_in_range / D['resolution'])
+            feature_vector[i] = floor(score_in_range / M.resolution)
 
         # Convert feature vector to tuple and use as a key into the bins dictionary
         feature_vector = tuple(feature_vector)

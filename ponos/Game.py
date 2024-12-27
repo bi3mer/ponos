@@ -3,6 +3,7 @@ from json import dumps, loads
 
 from Utility.web import web_get, web_get_json
 from Utility.LevelAssessment import LevelAssessment
+from Utility.Metric import Metric
 from Utility.Ngram import NGram
 
 class Game:
@@ -21,7 +22,15 @@ class Game:
         self.start_population_size: int = json_data['start-population-size']
         self.start_strand_size: int = json_data['start-strand-size']
         self.ngram_operators: bool = json_data['n-gram-operators']
-        self.metrics = json_data['computational-metrics']
+
+        self.metrics: List[Metric] = []
+        for m in json_data['computational-metrics']:
+            self.metrics.append(Metric(
+                min=m['min'],
+                max=m['max'],
+                resolution=m['resolution'],
+                name = m['name']
+            ))
 
         # set up n-grams
         self.ngram: NGram = NGram(json_data['n'])
@@ -42,9 +51,9 @@ class Game:
 
         metrics = []
         for m in self.metrics:
-            value = results[m['name']]
-            assert value >= m['min'], f"Metric must be >= to reported min in config, {m['min']}"
-            assert value <= m['max'], f"Metric must be <= to reported min in config, {m['max']}"
+            value = results[m.name]
+            assert value >= m.min, f"Metric must be >= to reported min in config, {m.min}"
+            assert value <= m.max, f"Metric must be <= to reported min in config, {m.max}"
             metrics.append(value)
 
         c = results['completability']

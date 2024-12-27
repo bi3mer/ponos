@@ -14,11 +14,17 @@ import json
 import os
 
 def main():
-    # Get server from user input
+    # Get arguments from command line
     parser = argparse.ArgumentParser(description='Ponos')
     parser.add_argument('--server', type=str, help="URL, ideally 127.0.0.1:[PORT] for game server.")
     parser.add_argument('--socket', type=str, help="URL for web socket.")
-    parser.add_argument('--model-name', type=str, help="Name of file for resulting pickle file (don't include extension).", required=True)
+    parser.add_argument(
+        '--model-name',
+        type=str,
+        help="Name of file for resulting pickle file (don't include extension).",
+        required=True
+    )
+
     args = parser.parse_args()
 
     if args.socket == None and args.server == None:
