@@ -12,8 +12,19 @@ import json
 def main():
     # Get server from user input
     parser = argparse.ArgumentParser(description='Ponos')
-    parser.add_argument('--server', type=str, required=True, help="URL for game server.")
+    parser.add_argument('--server', type=str, help="URL, ideally 127.0.0.1:[PORT] for game server.")
+    parser.add_argument('--socket', type=str, help="URL for web socket.")
     args = parser.parse_args()
+
+    if args.socket == None and args.server == None:
+        parser.print_help()
+        exit(1)
+    elif args.socket != None and args.server != None:
+        print('Cannot use both socket and server, please only use one.')
+        exit(1)
+    elif args.socket:
+        print('Web socket not yet supported... :/')
+        exit(1)
 
     server = args.server
 
