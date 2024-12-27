@@ -2,7 +2,7 @@ from typing import List, Optional
 from collections import deque
 from Game import Game
 
-def generate_link(G: Game, start: List[str],end: List[str]) -> Optional[List[str]]:
+def generate_link(G: Game, start: List[str], end: List[str], min_size: int) -> Optional[List[str]]:
     '''
     Build a link between two connecting segments. If an agent and feature descriptors
     are provided then this will exhaustively search all possible links and use the

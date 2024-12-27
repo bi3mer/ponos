@@ -1,37 +1,29 @@
+from random import randrange, random
 from typing import List
 
 from Utility.LinkerGeneration import generate_link
-from random import randrange, random
+from Game import Game
 from .IMutate import IMutate
 
-class NGramMutate(IMutate):
-    __slots__ = [
-        'standard_deviation', 'mutation_values', 'mutation_rate', 
-        'max_length', 'gram']
 
-    def __init__(self, mutation_rate, gram, max_length):
-        self.mutation_rate = mutation_rate
-        self.max_length = max_length
-        self.gram = gram
+class NGramMutate(IMutate):
+    def __init__(self, G: Game):
+        self.G = G
 
     def mutate(self, strand: List[str]) -> List[str]:
-        if strand == None:
-            return None
-
-        if random() < self.mutation_rate:
-            point = randrange(self.gram.n - 1, len(strand) - self.gram.n - 1)
+        if random() < self.G.mutation_rate:
+            point = randrange(self.G.ngram.n - 1, len(strand) - self.G.ngram.n - 1)
             start =  strand[:point]
             end = strand[point + 1:]
 
-            assert self.gram.sequence_is_possible(start)
-            assert self.gram.sequence_is_possible(end)
-            
-            link = generate_link(self.gram, start, end, 1)
-            path = start + link + end
-            
-            assert self.gram.sequence_is_possible(path)
+            assert self.G.ngram.sequence_is_possible(start)
+            assert self.G.ngram.sequence_is_possible(end)
 
-            return path[:self.max_length]
-        
+            link = generate_link(self.G, start, end, 1)
+            path = start + link + end
+
+            assert self.G.ngram.sequence_is_possible(path)
+
+            return path[:self.G.max_strand_size]
+
         return strand
-        
