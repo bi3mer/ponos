@@ -1,11 +1,9 @@
-from curses import has_key
-from ast import Index
-from genericpath import isdir
 #!/usr/bin/env python
 
 from GramElites.MapElites import MapElites
 from GDM.GDM.Graph import Graph
 
+from Utility.Math import euclidean_distance
 from Utility.CustomNode import CustomNode
 from Utility.CustomEdge import CustomEdge
 from Utility.web import web_get
@@ -14,7 +12,6 @@ from Game import Game
 from random import seed
 from time import time
 import argparse
-import shutil
 import json
 import os
 
@@ -75,11 +72,16 @@ def main():
     map_elites.run()
 
     ####### Linking
-    # Add Nodes
+    # Add Nodes and finding start node for linking step
+    ORIGIN = tuple(0 for _ in range(len(G.metrics)))
+    start_node = None
+
+    dist = 1000000
     print('Adding nodes...')
+    BINS = map_elites.bins
     MDP = Graph()
-    for key in map_elites.bins:
-        B = map_elites.bins[key]
+    for key in BINS:
+        B = BINS[key]
         start_name = '_'.join(str(k) for k in key)
         for i, elite in enumerate(B):
             # elite fitness must be 0.0 to be *usable*
@@ -93,9 +95,18 @@ def main():
                     level = elite[1]
                 ))
 
+                D = euclidean_distance(ORIGIN, key)
+                if D < dist:
+                    dist = D
+                    start_node = key
+
+    print(f'Built {len(MDP.nodes)} level segments.')
+    assert start_node != None, "No valid start node found."
+    start_node = start_node + (0,)
+
     # Add edges with no link or link if valid. Otherwise, don't add.
     print('Linking edges...')
-    origin_node = (0, 0, 0)
+    print(f'Start Node {start_node} for level assembly.')
     # if MDP.has_key()
 
 

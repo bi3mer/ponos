@@ -1,4 +1,9 @@
 from math import sqrt
+from typing import Tuple, Union
+
+def euclidean_distance(a: Tuple[Union[int, float],...], b: Tuple[Union[int, float],...]) -> float:
+    assert len(a) == len(b)
+    return sqrt(sum((a_ - b_)**2 for a_, b_ in zip(a, b)))
 
 def median(number_list):
     number_list.sort()
@@ -8,7 +13,6 @@ def median(number_list):
         return (median1 + median2)/2
 
     return number_list[len(number_list)//2]
-
 
 def mean(number_list):
     return sum(number_list) / len(number_list)
