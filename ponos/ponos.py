@@ -83,6 +83,7 @@ def main():
     for key in BINS:
         B = BINS[key]
         start_name = '_'.join(str(k) for k in key)
+        # TODO: each node has a list of valid level segments rather than individual nodes per
         for i, elite in enumerate(B):
             # elite fitness must be 0.0 to be *usable*
             if elite[0] == 0.0:
@@ -102,12 +103,17 @@ def main():
 
     print(f'Built {len(MDP.nodes)} level segments.')
     assert start_node != None, "No valid start node found."
-    start_node = start_node + (0,)
 
     # Add edges with no link or link if valid. Otherwise, don't add.
     print('Linking edges...')
-    print(f'Start Node {start_node} for level assembly.')
-    # if MDP.has_key()
+    queue = [start_node + (0,)]
+    def add_neighbors(node):
+        # loop through directions (0,...), (1,...), etc.
+        # add neighbors that exist in the MDP.has_node
+        pass
+
+    # while len(queue) != 0:
+    #     cur_node = queue.pop()
 
 
     ####### MDP

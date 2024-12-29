@@ -3,6 +3,7 @@ from json import dumps, loads
 
 from Utility.web import web_get, web_get_json
 from Utility.LevelAssessment import LevelAssessment
+from Utility.MarkovChain import MarkovChain
 from Utility.Metric import Metric
 from Utility.Ngram import NGram
 
@@ -32,7 +33,16 @@ class Game:
                 name = m['name']
             ))
 
-        # set up n-grams
+        # set up n-grams and markov chains
+        self.forward_chain: MarkovChain = MarkovChain(
+            json_data['structure-chars'],
+            json_data['structure-size'])
+
+        self.backward_chain: MarkovChain = MarkovChain(
+            json_data['structure-chars'],
+            json_data['structure-size'],
+            backward=True)
+
         self.ngram: NGram = NGram(json_data['n'])
         unigram = NGram(1)
 
@@ -45,6 +55,19 @@ class Game:
         unigram_keys.difference_update(pruned) # remove any n-gram dead ends from unigram
 
         self.mutation_values = list(unigram_keys)
+
+        # set up for linking
+        self.allow_empty_link: bool = json_data['allow-empty-link']
+        self.max_linker_length: int = json_data['max-linker-length']
+        self.structure_chars: List[str] = json_data['structure-chars']
+
+        print('TODO: add support for custom-linking-columns in json_data.')
+        if 'custom-liking-columns' in json_data:
+            print("custom linking columns not supported yet.")
+            self.linking_slices: List[List[str]] = []
+            exit(1)
+        else:
+            self.linking_slices: List[List[str]] = [[l] for l in unigram_keys if all(c not in l for c in self.structure_chars)]
 
     def assess(self, level: List[str]) -> LevelAssessment:
         results = web_get_json(self.assess_endpoint, {'lvl': dumps(level)})
