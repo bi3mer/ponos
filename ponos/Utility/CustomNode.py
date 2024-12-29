@@ -4,4 +4,4 @@ from GDM.GDM.Graph.Node import Node
 
 @dataclass
 class CustomNode(Node):
-    level: List[str]
+    levels: List[List[str]]

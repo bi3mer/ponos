@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from typing import List
+
 from GramElites.MapElites import MapElites
 from GDM.GDM.Graph import Graph
 
@@ -82,24 +84,28 @@ def main():
     MDP = Graph()
     for key in BINS:
         B = BINS[key]
-        start_name = '_'.join(str(k) for k in key)
-        # TODO: each node has a list of valid level segments rather than individual nodes per
+        bin_name = '_'.join(str(k) for k in key)
+        segments: List[List[str]] = []
+
         for i, elite in enumerate(B):
             # elite fitness must be 0.0 to be *usable*
             if elite[0] == 0.0:
-                MDP.add_node(CustomNode(
-                    name = f'{start_name}_{i}',
-                    reward = 0,
-                    utility = 0,
-                    is_terminal = False,
-                    neighbors = set(),
-                    level = elite[1]
-                ))
+                segments.append(elite[0])
 
-                D = euclidean_distance(ORIGIN, key)
-                if D < dist:
-                    dist = D
-                    start_node = key
+        if len(segments) > 0:
+            MDP.add_node(CustomNode(
+                name = bin_name,
+                reward = 0,
+                utility = 0,
+                is_terminal = False,
+                neighbors = set(),
+                levels = segments
+            ))
+
+            D = euclidean_distance(ORIGIN, key)
+            if D < dist:
+                dist = D
+                start_node = key
 
     print(f'Built {len(MDP.nodes)} level segments.')
     assert start_node != None, "No valid start node found."
