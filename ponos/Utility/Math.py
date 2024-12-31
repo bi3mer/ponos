@@ -1,7 +1,7 @@
 from math import sqrt
-from typing import Tuple, Union
+from typing import Tuple
 
-def euclidean_distance(a: Tuple[Union[int, float],...], b: Tuple[Union[int, float],...]) -> float:
+def euclidean_distance(a: Tuple[float,...], b: Tuple[float,...]) -> float:
     assert len(a) == len(b)
     return sqrt(sum((a_ - b_)**2 for a_, b_ in zip(a, b)))
 
@@ -45,3 +45,8 @@ def get_slope_and_intercept(x, y):
     m = ((n * sum_xy) - (sum_x * sum_y)) / ((n * sum_x_squared) - pow(sum_x, 2))
     b = (sum_y - (m * sum_x)) / n
     return m, b
+
+def tuple_add(a: Tuple[float,...], b: Tuple[float,...]) -> Tuple[float, ...]:
+    assert len(a) == len(b)
+
+    return tuple(a[i] + b[i] for i in range(len(a)))

@@ -14,6 +14,7 @@ class Game:
         self.assess_endpoint = f'{server}/assess-level'
 
         # json data
+        self.death_reward: float = json_data['death-reward']
         self.elites_per_bin: int = json_data['elites-per-bin']
         self.ngram_link_min_length: int = json_data['gram-elites-min-link-length']
         self.ngram_link_max_length: int = json_data['gram-elites-max-link-length']

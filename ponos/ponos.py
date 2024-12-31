@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 
-from typing import List
+from typing import List, Tuple
 
 from GramElites.MapElites import MapElites
 from GDM.GDM.Graph import Graph
 
-from Utility.Math import euclidean_distance
+from Utility.Math import euclidean_distance, tuple_add
 from Utility.CustomNode import CustomNode
 from Utility.CustomEdge import CustomEdge
 from Utility.web import web_get
@@ -16,6 +16,9 @@ from time import time
 import argparse
 import json
 import os
+
+def tuple_to_key(tup: Tuple[float,...]) -> str:
+    return '_'.join(str(k) for k in tup)
 
 def main():
     # Get arguments from command line
@@ -82,15 +85,15 @@ def main():
     print('Adding nodes...')
     BINS = map_elites.bins
     MDP = Graph()
+    MDP.add_default_node(node_name="start", reward=0.0)
+    MDP.add_default_node(node_name="death", reward=G.death_reward)
+
     for key in BINS:
         B = BINS[key]
-        bin_name = '_'.join(str(k) for k in key)
-        segments: List[List[str]] = []
+        bin_name = tuple_to_key(key)
 
-        for i, elite in enumerate(B):
-            # elite fitness must be 0.0 to be *usable*
-            if elite[0] == 0.0:
-                segments.append(elite[0])
+        # elite fitness must be 0.0 to be *usable*
+        segments: List[List[str]] = [elite[1] for elite in B if elite[0] == 0.0]
 
         if len(segments) > 0:
             MDP.add_node(CustomNode(
@@ -110,17 +113,51 @@ def main():
     print(f'Built {len(MDP.nodes)} level segments.')
     assert start_node != None, "No valid start node found."
 
+    # calculate link directions list
+    DIRECTIONS = []
+    _base_direction = [0 for _ in range(len(G.metrics))]
+    for i in range(len(G.metrics)):
+        new_direction = _base_direction.copy()
+        new_direction[i] = 1
+        DIRECTIONS.append(new_direction)
+
+        new_direction = _base_direction.copy()
+        new_direction[i] = -1
+        DIRECTIONS.append(new_direction)
+
     # Add edges with no link or link if valid. Otherwise, don't add.
     print('Linking edges...')
-    queue = [start_node + (0,)]
-    def add_neighbors(node):
-        # loop through directions (0,...), (1,...), etc.
-        # add neighbors that exist in the MDP.has_node
-        pass
 
-    # while len(queue) != 0:
-    #     cur_node = queue.pop()
+    seen = set()
+    seen.add(start_node)
+    queue = [start_node]
 
+    while len(queue) != 0:
+        src = queue.pop()
+        src_name = tuple_to_key(src)
+
+        for dir in DIRECTIONS:
+            tgt = tuple_add(src, dir)
+            tgt_name = tuple_to_key(tgt)
+
+            # If node doesn't exist, go to next direction
+            if not MDP.has_node(tgt_name):
+                continue
+
+            # create edge
+            # ERROR: this almost needs a custom inner graph of links between each level segment
+            # that is already inside the node
+            MDP.add_edge(CustomEdge(
+                src=src_name,
+                tgt=tgt_name,
+                probability=[(tgt_name, 0.99), ("death", 0.01)],
+                link=[] # ERROR: not building a link!
+            ))
+
+            # add new target to queue if it has not yet been seen
+            if tgt not in seen:
+                seen.add(tgt)
+                queue.append(tgt)
 
     ####### MDP
     print('Storing result...')
