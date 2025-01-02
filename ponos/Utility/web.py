@@ -1,15 +1,17 @@
-from typing_extensions import Dict, Any, Union
-from requests import get
-from json import loads
+from typing import Dict, Any, Union
+from urllib.request import urlopen
+from json import loads, dumps
 
 def web_get(endpoint: str, params: Union[Dict[str, Any], None]=None) -> Any:
-    request = get(endpoint, params=params)
+    if params != None:
+        args = []
+        for key in params:
+            args.append(f'{key}={dumps(params[key]).replace(" ", "%20")}')
 
-    if request.status_code != 200:
-        print(f"'{endpoint}' endpoint returned status code: {request.status_code}")
-        exit(1)
+        endpoint += "?" + '&'.join(args)
 
-    return request.content
+    with urlopen(endpoint) as R:
+        return R.read().decode('utf-8')
 
 def web_get_json(endpoint: str, params: Union[Dict[str, Any], None]=None) -> Any:
     return loads(web_get(endpoint, params))
