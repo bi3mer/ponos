@@ -170,5 +170,6 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
-# Ignore output pickle pickle file
+# Ignore output json graphs
 *.pkl
+*.json

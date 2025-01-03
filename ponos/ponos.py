@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 
-from typing import List, Tuple
+from typing import List, Tuple, cast
 
 from GramElites.MapElites import MapElites
 from GDM.GDM.Graph import Graph
 
 from Utility.Math import euclidean_distance, tuple_add
+from Utility.Linking import build_links_between_nodes
+from Utility.Link import Link
 from Utility.CustomNode import CustomNode
 from Utility.CustomEdge import CustomEdge
 from Utility.web import web_get
@@ -48,16 +50,16 @@ def main():
 
     # Make sure file won't be overwritten
     mdl_name = args.model_name
-    if os.path.exists(mdl_name + '.pkl'):
+    if os.path.exists(mdl_name + '.json'):
         index = 0
-        new_name = f'{mdl_name}_{index}.pkl'
+        new_name = f'{mdl_name}_{index}.json'
         while os.path.exists(new_name):
             index += 1
             new_name = f'{mdl_name}_{index}'
 
         mdl_name = new_name
     else:
-        mdl_name += '.pkl'
+        mdl_name += '.json'
 
     print(f'Result will be stored at: {mdl_name}')
 
@@ -77,6 +79,8 @@ def main():
     map_elites.run()
 
     ####### Linking
+    level_segments_found = 0
+
     # Add Nodes and finding start node for linking step
     ORIGIN = tuple(0 for _ in range(len(G.metrics)))
     start_node = None
@@ -85,8 +89,8 @@ def main():
     print('Adding nodes...')
     BINS = map_elites.bins
     MDP = Graph()
-    MDP.add_default_node(node_name="start", reward=0.0)
-    MDP.add_default_node(node_name="death", reward=G.death_reward)
+    MDP.add_default_node(node_name="start", terminal=True, reward=0.0)
+    MDP.add_default_node(node_name="death", terminal=True, reward=G.death_reward)
 
     for key in BINS:
         B = BINS[key]
@@ -96,6 +100,8 @@ def main():
         segments: List[List[str]] = [elite[1] for elite in B if elite[0] == 0.0]
 
         if len(segments) > 0:
+            level_segments_found += len(segments)
+
             MDP.add_node(CustomNode(
                 name = bin_name,
                 reward = 0,
@@ -110,7 +116,7 @@ def main():
                 dist = D
                 start_node = key
 
-    print(f'Built {len(MDP.nodes)} level segments.')
+    print(f'Built {level_segments_found} level segments.')
     assert start_node != None, "No valid start node found."
 
     # calculate link directions list
@@ -147,24 +153,29 @@ def main():
             # create edge
             # ERROR: this almost needs a custom inner graph of links between each level segment
             # that is already inside the node
-            MDP.add_edge(CustomEdge(
-                src=src_name,
-                tgt=tgt_name,
-                probability=[(tgt_name, 0.99), ("death", 0.01)],
-                link=[] # ERROR: not building a link!
-            ))
+            links = build_links_between_nodes(
+                cast(CustomNode, MDP.get_node(src_name)),
+                cast(CustomNode, MDP.get_node(tgt_name)),
+                G
+            )
+
+            if len(links) > 0:
+                MDP.add_edge(CustomEdge(
+                    src=src_name,
+                    tgt=tgt_name,
+                    probability=[(tgt_name, 0.99), ("death", 0.01)],
+                    links=links # ERROR: not building a link!
+                ))
 
             # add new target to queue if it has not yet been seen
             if tgt not in seen:
                 seen.add(tgt)
                 queue.append(tgt)
 
-    ####### MDP
-    print('Storing result...')
-    # Add start node and death node
-
-    # export
-
+    ####### Store
+    print('Storing the result...')
+    with open(mdl_name, 'w') as f:
+        f.write(MDP.to_json_string())
 
     print('DONE')
 

@@ -1,7 +1,9 @@
 from typing import List, Optional
 from collections import deque
 
-from ponos.Game import Game
+from Utility.CustomNode import CustomNode
+from Utility.Link import Link
+from Game import Game
 
 '''
 Citation: Biemer, C., & Cooper, S. (2022, August). On Linking Level Segments. In 2022 IEEE Conference on Games (CoG) (pp. 199-205).
@@ -36,7 +38,6 @@ def tree_search_link(start: List[str], end: List[str], G: Game) -> Optional[List
                 NEW_LEVEL = start + START_LINK + current_path + END_LINK + end
 
                 if G.assess(NEW_LEVEL).percent_completable == 1.0:
-                    assert G.ngram.sequence_is_possible(NEW_LEVEL)
                     return START_LINK + current_path + END_LINK
 
                 if len(current_path) < G.max_linker_length:
@@ -44,3 +45,20 @@ def tree_search_link(start: List[str], end: List[str], G: Game) -> Optional[List
                         queue.append(current_path + o)
 
     return None
+
+
+def build_links_between_nodes(src: CustomNode, tgt: CustomNode, G: Game) -> List[Link]:
+    links = []
+    for src_index, src_segment in enumerate(src.levels):
+        for tgt_index, tgt_segment in enumerate(tgt.levels):
+            link = tree_search_link(src_segment, tgt_segment, G)
+            if link == None:
+                continue
+
+            links.append(Link(
+               src_segment_index = src_index,
+               tgt_segment_index = tgt_index,
+               link = link
+            ))
+
+    return links
