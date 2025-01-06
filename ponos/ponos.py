@@ -8,16 +8,14 @@ from GDM.GDM.Graph import Graph
 from Utility.ProgressBar import progress_text
 from Utility.Math import euclidean_distance, tuple_add
 from Utility.Linking import build_links_between_nodes
-from Utility.Link import Link
 from Utility.CustomNode import CustomNode
 from Utility.CustomEdge import CustomEdge
-from Utility.web import web_get
+from Utility.web import RestClient, SocketClient
 from Game import Game
 
 from random import seed
 from time import time
 import argparse
-import json
 import os
 
 
@@ -27,8 +25,27 @@ def tuple_to_key(tup: Tuple[float,...]) -> str:
 def main():
     # Get arguments from command line
     parser = argparse.ArgumentParser(description='Ponos')
-    parser.add_argument('--server', type=str, help="URL, ideally 127.0.0.1:[PORT] for game server.")
-    parser.add_argument('--socket', type=str, help="URL for web socket.")
+    parser.add_argument(
+        '--host',
+        type=str,
+        default="127.0.0.1",
+        help="URL for host, defaults to 127.0.0.1",
+    )
+
+    parser.add_argument(
+        '--port',
+        type=int,
+        default=8000,
+        help="URL for host, defaults to 8000",
+    )
+
+    parser.add_argument(
+        '--use-rest-server',
+        default=False,
+        action='store_true',
+        help="Set to true if the server uses REST instead of a socket. Default is to use a socket."
+    )
+
     parser.add_argument(
         '--model-name',
         type=str,
@@ -37,18 +54,6 @@ def main():
     )
 
     args = parser.parse_args()
-
-    if args.socket == None and args.server == None:
-        parser.print_help()
-        exit(1)
-    elif args.socket != None and args.server != None:
-        print('Cannot use both socket and server, please only use one.')
-        exit(1)
-    elif args.socket:
-        print('Web socket not yet supported... :/')
-        exit(1)
-
-    server = args.server
 
     # Make sure file won't be overwritten
     mdl_name = args.model_name
@@ -66,14 +71,19 @@ def main():
     print(f'Result will be stored at: {mdl_name}')
 
     # Get config from game server
-    json_config = json.loads(web_get(f'{server}/config'))
+    if args.use_rest_server:
+        client = RestClient(f'http://{args.host}', args.port)
+    else:
+        client = SocketClient(args.host, args.port)
+
+    json_config = client.get_config()
 
     # set seed if relevant
     if 'seed' in json_config:
         seed(json_config['seed'])
 
     # set up game
-    G = Game(server, json_config)
+    G = Game(client, json_config)
 
     ####### Gram-Elites
     print('Running MAP-Elites...')

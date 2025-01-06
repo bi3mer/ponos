@@ -1,17 +1,14 @@
 from typing import Dict, Any, List
-from json import dumps, loads
 
-from Utility.web import web_get, web_get_json
+from Utility.web import Client
 from Utility.LevelAssessment import LevelAssessment
 from Utility.MarkovChain import MarkovChain
 from Utility.Metric import Metric
 from Utility.Ngram import NGram
 
 class Game:
-    def __init__(self, server: str, json_data: Dict[str, Any]):
-        # assign server end points
-        self.completability_endpoint = f'{server}/completability'
-        self.assess_endpoint = f'{server}/assess-level'
+    def __init__(self, client: Client, json_data: Dict[str, Any]):
+        self.client = client
 
         # json data
         self.death_reward: float = json_data['death-reward']
@@ -43,7 +40,7 @@ class Game:
         self.ngram: NGram = NGram(json_data['n'])
         unigram = NGram(1)
 
-        for lvl in loads(web_get(f'{server}/levels')):
+        for lvl in self.client.get_levels():
             self.ngram.add_sequence(lvl)
             unigram.add_sequence(lvl)
 
@@ -64,7 +61,7 @@ class Game:
             self.linking_slices: List[List[str]] = [[l] for l in unigram_keys if all(c not in l for c in self.structure_chars)]
 
     def assess(self, level: List[str]) -> LevelAssessment:
-        results = web_get_json(self.assess_endpoint, {'lvl': dumps(level)})
+        results = self.client.assess(level)
 
         metrics = []
         for m in self.metrics:
