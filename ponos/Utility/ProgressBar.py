@@ -1,5 +1,8 @@
 import sys
 
+def progress_text(message: str, done: bool = False):
+    print(message, end='\n' if done else '\r')
+
 def update_progress(progress, message=None):
     '''
     modifed from: https://stackoverflow.com/questions/3160699/python-progress-bar
@@ -9,7 +12,7 @@ def update_progress(progress, message=None):
     status = ""
     if isinstance(progress, int):
         progress = float(progress)
-    
+
     if not isinstance(progress, float):
         progress = 0
         status = "error: progress var must be float\r\n"
@@ -26,22 +29,22 @@ def update_progress(progress, message=None):
         text = f'\rPercent [{"#"*block + "-"*(barLength-block)}] {round(progress*100, 2)}% {status} :: {message}'
     else:
         text = f'\rPercent [{"#"*block + "-"*(barLength-block)}] {round(progress*100, 2)}% {status}'
-        
+
     sys.stdout.write(text)
     sys.stdout.flush()
 
-class Bar:
-    def __init__(self, denominator):
-        self.numerator = -1
-        self.denominator = denominator
-        self.update()
+# class Bar:
+#     def __init__(self, denominator):
+#         self.numerator = -1
+#         self.denominator = denominator
+#         self.update()
 
-    def update(self, message=None):
-        self.numerator += 1
-        if self.numerator >= self.denominator:
-            update_progress(1)
+#     def update(self, message=None):
+#         self.numerator += 1
+#         if self.numerator >= self.denominator:
+#             update_progress(1)
 
-        update_progress(self.numerator / self.denominator, message=message)
+#         update_progress(self.numerator / self.denominator, message=message)
 
-    def done(self):
-        update_progress(1)
+#     def done(self):
+#         update_progress(1)

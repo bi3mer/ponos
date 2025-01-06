@@ -5,6 +5,7 @@ from typing import List, Tuple, cast
 from GramElites.MapElites import MapElites
 from GDM.GDM.Graph import Graph
 
+from Utility.ProgressBar import progress_text
 from Utility.Math import euclidean_distance, tuple_add
 from Utility.Linking import build_links_between_nodes
 from Utility.Link import Link
@@ -18,6 +19,7 @@ from time import time
 import argparse
 import json
 import os
+
 
 def tuple_to_key(tup: Tuple[float,...]) -> str:
     return '_'.join(str(k) for k in tup)
@@ -133,11 +135,13 @@ def main():
 
     # Add edges with no link or link if valid. Otherwise, don't add.
     print('Linking edges...')
+    links_found = 0
 
     seen = set()
     seen.add(start_node)
     queue = [start_node]
 
+    progress_text(f'Links found: {links_found}')
     while len(queue) != 0:
         src = queue.pop()
         src_name = tuple_to_key(src)
@@ -158,17 +162,22 @@ def main():
             )
 
             if len(links) > 0:
+                links_found += len(links)
+                progress_text(f'Links found: {links_found}')
+
                 MDP.add_edge(CustomEdge(
                     src=src_name,
                     tgt=tgt_name,
                     probability=[(tgt_name, 0.99), ("death", 0.01)],
-                    links=links # ERROR: not building a link!
+                    links=links
                 ))
 
             # add new target to queue if it has not yet been seen
             if tgt not in seen:
                 seen.add(tgt)
                 queue.append(tgt)
+
+    progress_text(f'Links found: {links_found}', done=True)
 
     ####### Store
     print('Storing the result...')
