@@ -19,7 +19,7 @@ class NGramMutate(IMutate):
             assert self.G.ngram.sequence_is_possible(start)
             assert self.G.ngram.sequence_is_possible(end)
 
-            link = generate_link(self.G, start, end, 1)
+            link = generate_link(self.G, start, end, min_size=1)
             path = start + link + end
 
             assert self.G.ngram.sequence_is_possible(path)

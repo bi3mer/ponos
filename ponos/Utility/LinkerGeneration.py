@@ -2,13 +2,7 @@ from typing import List, Optional
 from collections import deque
 from Game import Game
 
-def generate_link(G: Game, start: List[str], end: List[str], min_size: int) -> Optional[List[str]]:
-    '''
-    Build a link between two connecting segments. If an agent and feature descriptors
-    are provided then this will exhaustively search all possible links and use the
-    one with the lowest rmse between the feature values found and the targets based
-    on the start and end level segments provided in the arguments.
-    '''
+def generate_link(G: Game, start: List[str], end: List[str], min_size: int=0) -> Optional[List[str]]:
     # Make sure input is n-gram generable
     assert G.ngram.sequence_is_possible(start), f'Invalid n-gram sequence: {start}'
     assert G.ngram.sequence_is_possible(end), f'Invalid n-gram sequence: {end}'
@@ -17,7 +11,7 @@ def generate_link(G: Game, start: List[str], end: List[str], min_size: int) -> O
     # end is already valid, then return. However, if an agent is given, validate
     # that the agent can play through the combination before returning.
     combined = start + end
-    if G.ngram_link_min_length == 0 and G.ngram.sequence_is_possible(combined):
+    if min_size == 0 and G.ngram.sequence_is_possible(combined):
         assessment = G.assess(combined)
         if assessment.percent_completable == 1.0:
             return []
@@ -27,6 +21,7 @@ def generate_link(G: Game, start: List[str], end: List[str], min_size: int) -> O
     ######### Build Link
     # generate path of minimum length with an n-gram
     N = G.ngram.n
+    min_size += N - 1
 
     # BFS to find the ending prior
     queue = deque()
@@ -40,40 +35,40 @@ def generate_link(G: Game, start: List[str], end: List[str], min_size: int) -> O
     # loop through queue until a path is found
     while queue:
         node = queue.popleft()
-        if node[1] + 1 > G.max_strand_size:
-            continue
-
         current_prior = node[0]
+        link_length = node[1]
+
+        # link found, but make sure it is longer than min length
+        if current_prior == end_prior and link_length >= min_size:
+            # reconstruct path and return
+            path = []
+
+            while node != start_node:
+                path.append(node[0][-1])
+                node = came_from[node]
+
+            path.reverse()
+            return path[:1-N]
+
+        # We haven't, so expand the search
         output = G.ngram.get_unweighted_output_list(current_prior)
         if output == None:
             continue
 
+        next_link_length = link_length + 1
         for new_column in output:
             # build the new prior with the slice found by removing the first
             # slice
             new_prior = current_prior[1:] + (new_column,)
-            new_node = (new_prior, node[1] + 1)
+            new_node = (new_prior, next_link_length)
 
-            if new_node[1] < G.ngram_link_min_length or new_node in came_from:
+            if new_node in came_from:
                 continue
 
             # if the prior is not the end prior, add it to the search queue and
             # continue the search
             came_from[new_node] = node
             queue.append(new_node)
-            if new_prior != end_prior:
-                continue
-
-            # link found, reconstruct path
-            path = []
-            temp_node = new_node
-            while temp_node != start_node:
-                path.insert(0, temp_node[0][-1])
-                temp_node = came_from[temp_node]
-
-            # only use the path if we have constructed a path that is larger than n.
-            if len(path) >= G.ngram_link_max_length:
-                return path[:-(N - 1)]
 
     # No link found
     return None

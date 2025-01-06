@@ -55,7 +55,7 @@ def main():
         new_name = f'{mdl_name}_{index}.json'
         while os.path.exists(new_name):
             index += 1
-            new_name = f'{mdl_name}_{index}'
+            new_name = f'{mdl_name}_{index}.json'
 
         mdl_name = new_name
     else:
@@ -151,8 +151,6 @@ def main():
                 continue
 
             # create edge
-            # ERROR: this almost needs a custom inner graph of links between each level segment
-            # that is already inside the node
             links = build_links_between_nodes(
                 cast(CustomNode, MDP.get_node(src_name)),
                 cast(CustomNode, MDP.get_node(tgt_name)),

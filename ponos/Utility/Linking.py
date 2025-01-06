@@ -16,7 +16,8 @@ def concatenate_link(start: List[str], end: List[str], G: Game) -> Optional[List
 def tree_search_link(start: List[str], end: List[str], G: Game) -> Optional[List[str]]:
     '''
     This is very similar to the code in Linker Generation. The main difference is that we
-    are testing searchig for something that is 100% playable
+    are testing searchig for something that is 100% playable. Since the linking slices
+    minimal, we are okay if the level is not n-gram generable.
     '''
     if G.allow_empty_link and \
        G.ngram.sequence_is_possible(start + end) and \

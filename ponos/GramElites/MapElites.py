@@ -29,6 +29,7 @@ class MapElites:
 
         self.G: Game = G
         self.bins = {}
+        self.bin_ranges = [[i/r.resolution for i in range(r.resolution)] for r in G.metrics]
 
     def run(self):
         self.bins = {}
@@ -64,9 +65,20 @@ class MapElites:
         # Calculate the feature vector based on computational metrics
         feature_vector = [0] * len(assessment.metrics)
         for i in range(len(assessment.metrics)):
-            M = self.G.metrics[i]
-            score_in_range = (assessment.metrics[i] - M.min) * 100 / (M.max - M.min)
-            feature_vector[i] = floor(score_in_range / M.resolution)
+            # M = self.G.metrics[i]
+            # score_in_range = (assessment.metrics[i] - M.min) * 100 / (M.max - M.min)
+            # feature_vector[i] = floor(score_in_range / M.resolution)
+            val = assessment.metrics[i]
+            b_range = self.bin_ranges[i]
+
+            # NOTE: this could be potentially faster with a binary search, but I'm betting
+            # that the resolution is small enough that a linear search will be faster even
+            # though it will on average require more instructions.
+            for bin_index in range(len(b_range)):
+                if val < b_range[bin_index]:
+                    break
+
+                feature_vector[i] = bin_index
 
         # Convert feature vector to tuple and use as a key into the bins dictionary
         feature_vector = tuple(feature_vector)
