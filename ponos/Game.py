@@ -26,8 +26,6 @@ class Game:
         self.metrics: List[Metric] = []
         for m in json_data['computational-metrics']:
             self.metrics.append(Metric(
-                min=m['min'],
-                max=m['max'],
                 resolution=m['resolution'],
                 name = m['name']
             ))
@@ -60,11 +58,8 @@ class Game:
         self.max_linker_length: int = json_data['max-linker-length']
         self.structure_chars: List[str] = json_data['structure-chars']
 
-        print('TODO: add support for custom-linking-columns in json_data.')
         if 'custom-liking-columns' in json_data:
-            print("custom linking columns not supported yet.")
-            self.linking_slices: List[List[str]] = []
-            exit(1)
+            self.linking_slices: List[List[str]] = json_data['custom-liking-columns']
         else:
             self.linking_slices: List[List[str]] = [[l] for l in unigram_keys if all(c not in l for c in self.structure_chars)]
 
@@ -74,12 +69,12 @@ class Game:
         metrics = []
         for m in self.metrics:
             value = results[m.name]
-            assert value >= m.min, f"Metric must be >= to reported min in config, {m.min}"
-            assert value <= m.max, f"Metric must be <= to reported min in config, {m.max}"
+            assert value >= 0, f"{m.name} must be >= 0"
+            assert value <= 1, f"{m.name} must be <= 1"
             metrics.append(value)
 
         c = results['completability']
-        assert c >= 0.0, "Completion value must be in the inclusive range of 0 and 1."
-        assert c <= 1.0, "Completion value must be in the inclusive range of 0 and 1."
+        assert c >= 0.0, "Completion value must be >= 0."
+        assert c <= 1.0, "Completion value must be <= 1."
 
         return LevelAssessment(results['completability'], metrics)
