@@ -22,7 +22,7 @@ pypy3 ponos/ponos.py --model-name mario --use-rest-server --port 5000
 ```
 
 ### Help
-```bash
+```
 > python ponos/ponos.py --help
 usage: ponos.py [-h] [--host HOST] [--port PORT] [--use-rest-server] --model-name MODEL_NAME
 
