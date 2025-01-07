@@ -8,7 +8,7 @@ Ponos is a tool for building a [Markov Decision Process (MDP)](https://en.wikipe
 
 ## Usage
 
-Ponos works by interacting with a socket server or a rest server. For the command below to work, the server must be running. Examples of kinds of servers can be seen in the [examples repo](https://github.com/bi3mer/ponos-example). Fair warning, sockets are, unsurprisingly, a lot faster, so I recommend using them.
+Ponos works by interacting with a socket server or a REST server. For the command below to work, the server must be running. Examples of kinds of servers can be seen in the [examples repo](https://github.com/bi3mer/ponos-example). Fair warning, sockets are, unsurprisingly, a lot faster, so I recommend using them.
 
 ### Socket Server
 
