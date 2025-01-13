@@ -52,7 +52,6 @@ class SocketClient(Client):
         self.s.close()
 
     def get_config(self) -> Dict[str, Any]:
-        print('get config')
         self.s.sendall(b"config")
         data = self.s.recv(1024)
         return loads(data.decode('utf-8'))
