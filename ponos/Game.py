@@ -5,6 +5,7 @@ from Utility.LevelAssessment import LevelAssessment
 from Utility.MarkovChain import MarkovChain
 from Utility.Metric import Metric
 from Utility.Ngram import NGram
+from Utility.GridTools import rows_into_columns
 
 class Game:
     def __init__(self, client: Client, json_data: Dict[str, Any]):
@@ -19,6 +20,7 @@ class Game:
         self.start_population_size: int = json_data['start-population-size']
         self.start_strand_size: int = json_data['start-strand-size']
         self.ngram_operators: bool = json_data['n-gram-operators']
+        self.levels_are_horizontal: bool = json_data['levels-are-horizontal']
 
         self.metrics: List[Metric] = []
         for m in json_data['computational-metrics']:
@@ -41,8 +43,13 @@ class Game:
         unigram = NGram(1)
 
         for lvl in self.client.get_levels():
-            self.ngram.add_sequence(lvl)
-            unigram.add_sequence(lvl)
+            if self.levels_are_horizontal:
+                lvl = rows_into_columns(lvl)
+                self.ngram.add_sequence(lvl)
+                unigram.add_sequence(lvl)
+            else:
+                self.ngram.add_sequence(lvl)
+                unigram.add_sequence(lvl)
 
         unigram_keys = set(unigram.grammar[()].keys())
         pruned = self.ngram.fully_connect()    # remove dead ends from grammar

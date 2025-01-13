@@ -10,6 +10,7 @@ from Utility.Math import euclidean_distance, tuple_add
 from Utility.Linking import build_links_between_nodes
 from Utility.CustomNode import CustomNode
 from Utility.CustomEdge import CustomEdge
+from Utility.GridTools import columns_into_rows
 from Utility.web import RestClient, SocketClient
 from Game import Game
 
@@ -17,6 +18,7 @@ from random import seed
 from time import time
 import argparse
 import os
+
 
 
 def tuple_to_key(tup: Tuple[float,...]) -> str:
@@ -188,6 +190,22 @@ def main():
                 queue.append(tgt)
 
     progress_text(f'Links found: {links_found}', done=True)
+
+    ####### Update orientation of the levels
+    if G.levels_are_horizontal:
+        for node_name in MDP.nodes:
+            if node_name == 'start' or node_name == 'death':
+                continue
+
+            n = cast(CustomNode, MDP.nodes[node_name])
+            for i in range(len(n.levels)):
+                n.levels[i] = columns_into_rows(n.levels[i])
+
+        for edge_name in MDP.edges:
+            e = cast(CustomEdge, MDP.edges[edge_name])
+            for i in range(len(e.links)):
+                if len(e.links[i].link) > 0:
+                    e.links[i].link = columns_into_rows(e.links[i].link)
 
     ####### Store
     print('Storing the result...')
