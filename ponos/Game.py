@@ -68,7 +68,10 @@ class Game:
             self.linking_slices: List[List[str]] = [[l] for l in unigram_keys if all(c not in l for c in self.structure_chars)]
 
     def assess(self, level: List[str]) -> LevelAssessment:
-        results = self.client.assess(level)
+        if self.levels_are_horizontal:
+            results = self.client.assess(rows_into_columns(level))
+        else:
+            results = self.client.assess(level)
 
         metrics = []
         for m in self.metrics:

@@ -98,8 +98,8 @@ def main():
     # Add Nodes and finding start node for linking step
     ORIGIN = tuple(0 for _ in range(len(G.metrics)))
     start_node = None
-
     dist = 1000000
+
     print('Adding nodes...')
     BINS = map_elites.bins
     MDP = Graph()
@@ -131,7 +131,7 @@ def main():
                 start_node = key
 
     print(f'Built {level_segments_found} level segments.')
-    assert start_node != None, "No valid start node found."
+    assert start_node != None, "No valid start node found. This means no usable nodes were found, and the search failed."
 
     # calculate link directions list
     DIRECTIONS = []
