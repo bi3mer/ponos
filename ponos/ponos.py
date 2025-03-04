@@ -19,8 +19,6 @@ from time import time
 import argparse
 import os
 
-
-
 def tuple_to_key(tup: Tuple[float,...]) -> str:
     return '_'.join(str(k) for k in tup)
 
@@ -110,8 +108,13 @@ def main():
         B = BINS[key]
         bin_name = tuple_to_key(key)
 
-        # elite fitness must be 0.0 to be *usable*
-        segments: List[List[str]] = [elite[1] for elite in B if elite[0] == 0.0]
+        # elite fitness must be 0.0 to be usable, and we don't want duplicate
+        # elite level segments
+        segments: List[List[str]] = []
+        for elite in B:
+            if elite[0] == 0.0 and elite[1] not in segments:
+                segments.append(elite[1])
+
 
         if len(segments) > 0:
             level_segments_found += len(segments)

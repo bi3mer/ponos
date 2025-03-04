@@ -67,7 +67,6 @@ class SocketClient(Client):
         return loads(lvls[:-3])
 
     def assess(self, lvl: List[str]):
-        print(lvl)
         self.s.sendall(f"assess{dumps(lvl)}".encode('utf-8'))
         data = self.s.recv(1024)
         return loads(data.decode('utf-8'))

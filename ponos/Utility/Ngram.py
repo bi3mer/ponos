@@ -48,10 +48,10 @@ class NGram():
     def get_unweighted_output_list(self, sequence):
         if sequence not in self.grammar:
             return None
-            
+
         unigram = self.grammar[sequence]
         return list(unigram.keys())
-    
+
     def generate(self, prior, size):
         output = []
 
@@ -77,7 +77,7 @@ class NGram():
             prior.append(token)
 
         return True
-        
+
     def count_bad_n_grams(self, sequence):
         max_length = self.n - 1
         queue = deque([], maxlen=max_length)
@@ -120,7 +120,7 @@ class NGram():
                         vertices[prior][1] = min(vertices[prior][1], vertices[new_prior][1])
                     elif new_prior in s:
                         vertices[prior][1] = min(vertices[prior][1], vertices[new_prior][0])
-                
+
             if vertices[prior][0] == vertices[prior][1]:
                 new_prior = None
                 scc_group = []
@@ -142,7 +142,7 @@ class NGram():
             for prior in grp:
                 if prior in self.grammar:
                     del self.grammar[prior]
-                
+
                 for key in self.grammar:
                     to_delete = []
                     for output_token in self.grammar[key]:

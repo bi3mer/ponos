@@ -5,7 +5,7 @@ from Utility.LevelAssessment import LevelAssessment
 from Utility.MarkovChain import MarkovChain
 from Utility.Metric import Metric
 from Utility.Ngram import NGram
-from Utility.GridTools import rows_into_columns
+from Utility.GridTools import columns_into_rows, rows_into_columns
 
 class Game:
     def __init__(self, client: Client, json_data: Dict[str, Any]):
@@ -69,9 +69,9 @@ class Game:
 
     def assess(self, level: List[str]) -> LevelAssessment:
         if self.levels_are_horizontal:
-            results = self.client.assess(rows_into_columns(level))
-        else:
             results = self.client.assess(level)
+        else:
+            results = self.client.assess(columns_into_rows(level))
 
         metrics = []
         for m in self.metrics:
