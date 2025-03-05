@@ -14,7 +14,7 @@ from Utility.GridTools import columns_into_rows
 from Utility.web import RestClient, SocketClient
 from Game import Game
 
-from random import seed
+from random import seed, random
 from time import time
 import argparse
 import os
@@ -115,17 +115,18 @@ def main():
             if elite[0] == 0.0 and elite[1] not in segments:
                 segments.append(elite[1])
 
-
         if len(segments) > 0:
             level_segments_found += len(segments)
 
+            print("WARNING: need to assign reward with call to server")
             MDP.add_node(CustomNode(
                 name = bin_name,
-                reward = 0,
+                reward = -random(),
                 utility = 0,
                 is_terminal = False,
                 neighbors = set(),
-                levels = segments
+                levels = segments,
+                depth = -1
             ))
 
             D = euclidean_distance(ORIGIN, key)
@@ -200,15 +201,52 @@ def main():
             if node_name == 'start' or node_name == 'death':
                 continue
 
-            n = cast(CustomNode, MDP.nodes[node_name])
-            for i in range(len(n.levels)):
-                n.levels[i] = columns_into_rows(n.levels[i])
+            node_name = cast(CustomNode, MDP.nodes[node_name])
+            for i in range(len(node_name.levels)):
+                node_name.levels[i] = columns_into_rows(node_name.levels[i])
 
         for edge_name in MDP.edges:
             e = cast(CustomEdge, MDP.edges[edge_name])
             for i in range(len(e.links)):
                 if len(e.links[i].link) > 0:
                     e.links[i].link = columns_into_rows(e.links[i].link)
+
+    ####### Find node with lowest reward and make it connect to start node
+    lowest_reward = 10000
+    lowest_reward_node_name = ""
+    for node_name in MDP.nodes:
+        if node_name == "start" or node_name == "death":
+            continue
+
+        node = cast(CustomNode, MDP.nodes[node_name])
+        if node.reward < lowest_reward:
+            lowest_reward = node.reward
+            lowest_reward_node_name = node_name
+
+    MDP.add_edge(CustomEdge("start", lowest_reward_node_name, [(lowest_reward_node_name, 0.99), ("death", 0.01)], []))
+    cast(CustomNode, MDP.get_node(lowest_reward_node_name)).depth = 1
+
+    ####### Update the depth, starting from the start node. Make max depth node
+    ####### connect to the end node
+    queue = [lowest_reward_node_name]
+    visited = set()
+    visited.add(lowest_reward_node_name)
+    max_depth_node = lowest_reward_node_name
+
+    while len(queue) > 0:
+        node_name = queue.pop(0)
+        max_depth_node = node_name
+
+        new_depth = cast(CustomNode, MDP.get_node(node_name)).depth + 1
+
+        for node_name in MDP.neighbors(node_name):
+            if node_name not in visited:
+                visited.add(node_name)
+                queue.append(node_name)
+                cast(CustomNode, MDP.get_node(node_name)).depth = new_depth
+
+    MDP.add_default_node(node_name="end", terminal=True, reward=G.end_reward)
+    MDP.add_default_edge(max_depth_node, "end")
 
     ####### Store
     print('Storing the result...')

@@ -13,6 +13,7 @@ class Game:
 
         # json data
         self.death_reward: float = json_data['death-reward']
+        self.end_reward: float = json_data['end-reward']
         self.elites_per_bin: int = json_data['elites-per-bin']
         self.mutation_rate: float = json_data['mutation-rate']
         self.iterations: int = json_data['iterations']
