@@ -27,11 +27,16 @@ class Client:
     def assess(self, lvl: List[str]):
         raise NotImplementedError()
 
+    def reward(self, lvl: List[str]):
+        raise NotImplementedError()
+
+
 class RestClient(Client):
     def __init__(self, host: str, port: int):
         print("REST")
         self.url = f'{host}:{port}'
         self.assess_endpoint = f'{self.url}/assess'
+        self.reward_endpoint = f'{self.url}/reward'
 
     def get_config(self) -> Dict[str, Any]:
         return web_get_json(f'{self.url}/config')
@@ -41,6 +46,10 @@ class RestClient(Client):
 
     def assess(self, lvl: List[str]):
         return web_get_json(self.assess_endpoint, {'lvl': dumps(lvl)})
+
+    def reward(self, lvl: List[str]):
+        return web_get_json(self.reward_endpoint, {'lvl': dumps(lvl)})['reward']
+
 
 class SocketClient(Client):
     def __init__(self, host: str, port: int):
@@ -70,3 +79,8 @@ class SocketClient(Client):
         self.s.sendall(f"assess{dumps(lvl)}".encode('utf-8'))
         data = self.s.recv(1024)
         return loads(data.decode('utf-8'))
+
+    def reward(self, lvl: List[str]):
+        self.s.sendall(f"reward{dumps(lvl)}".encode('utf-8'))
+        data = self.s.recv(1024)
+        return loads(data.decode('utf-8'))['reward']

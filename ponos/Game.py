@@ -86,3 +86,9 @@ class Game:
         assert c <= 1.0, "Completion value must be <= 1."
 
         return LevelAssessment(results['completability'], metrics)
+
+    def reward(self, level: List[str]) -> float:
+        if self.levels_are_horizontal:
+            return self.client.reward(level)
+
+        return self.client.reward(columns_into_rows(level))

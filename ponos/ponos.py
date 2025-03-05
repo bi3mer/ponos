@@ -118,10 +118,9 @@ def main():
         if len(segments) > 0:
             level_segments_found += len(segments)
 
-            print("WARNING: need to assign reward with call to server")
             MDP.add_node(CustomNode(
                 name = bin_name,
-                reward = -random(),
+                reward = -1, # assigned later
                 utility = 0,
                 is_terminal = False,
                 neighbors = set(),
@@ -195,30 +194,18 @@ def main():
 
     progress_text(f'Links found: {links_found}', done=True)
 
-    ####### Update orientation of the levels
-    if G.levels_are_horizontal:
-        for node_name in MDP.nodes:
-            if node_name == 'start' or node_name == 'death':
-                continue
-
-            node_name = cast(CustomNode, MDP.nodes[node_name])
-            for i in range(len(node_name.levels)):
-                node_name.levels[i] = columns_into_rows(node_name.levels[i])
-
-        for edge_name in MDP.edges:
-            e = cast(CustomEdge, MDP.edges[edge_name])
-            for i in range(len(e.links)):
-                if len(e.links[i].link) > 0:
-                    e.links[i].link = columns_into_rows(e.links[i].link)
-
-    ####### Find node with lowest reward and make it connect to start node
+    ####### Find node with lowest reward and make it connect to start node, while
+    ####### doing this, we also request the reward from the server
     lowest_reward = 10000
     lowest_reward_node_name = ""
     for node_name in MDP.nodes:
-        if node_name == "start" or node_name == "death":
+        if node_name == 'start' or node_name == 'death' or node_name == 'end':
             continue
 
         node = cast(CustomNode, MDP.nodes[node_name])
+        rewards = [G.reward(l) for l in node.levels]
+        node.reward = sum(rewards) / len(rewards)
+
         if node.reward < lowest_reward:
             lowest_reward = node.reward
             lowest_reward_node_name = node_name
@@ -246,7 +233,23 @@ def main():
                 cast(CustomNode, MDP.get_node(node_name)).depth = new_depth
 
     MDP.add_default_node(node_name="end", terminal=True, reward=G.end_reward)
-    MDP.add_default_edge(max_depth_node, "end")
+    MDP.add_edge(CustomEdge(max_depth_node, "end", [(max_depth_node, 0.99), ("death", 0.01)], []))
+
+    ####### Update orientation of the levels
+    if G.levels_are_horizontal:
+        for node_name in MDP.nodes:
+            if node_name == 'start' or node_name == 'death' or node_name == 'end':
+                continue
+
+            node = cast(CustomNode, MDP.nodes[node_name])
+            for i in range(len(node.levels)):
+                node.levels[i] = columns_into_rows(node.levels[i])
+
+        for edge_name in MDP.edges:
+            e = cast(CustomEdge, MDP.edges[edge_name])
+            for i in range(len(e.links)):
+                if len(e.links[i].link) > 0:
+                    e.links[i].link = columns_into_rows(e.links[i].link)
 
     ####### Store
     print('Storing the result...')
