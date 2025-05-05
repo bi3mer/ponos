@@ -196,29 +196,27 @@ def main():
 
     ####### Find node with lowest reward and make it connect to start node, while
     ####### doing this, we also request the reward from the server
-    lowest_reward = 10000
-    lowest_reward_node_name = ""
+    lowest_dist = 10000
+    lowest_dist_node_name = ""
     for node_name in MDP.nodes:
         if node_name == 'start' or node_name == 'death' or node_name == 'end':
             continue
 
-        node = cast(CustomNode, MDP.nodes[node_name])
-        rewards = [G.reward(l) for l in node.levels]
-        node.reward = sum(rewards) / len(rewards)
+        dist = sum(int(b) for b in node_name.split('_'))
+        if dist < lowest_dist:
+            lowest_dist = dist
+            lowest_dist_node_name = node_name
 
-        if node.reward < lowest_reward:
-            lowest_reward = node.reward
-            lowest_reward_node_name = node_name
-
-    MDP.add_edge(CustomEdge("start", lowest_reward_node_name, [(lowest_reward_node_name, 0.99), ("death", 0.01)], []))
-    cast(CustomNode, MDP.get_node(lowest_reward_node_name)).depth = 1
+    MDP.add_edge(CustomEdge("start", lowest_dist_node_name, [(lowest_dist_node_name, 0.99), ("death", 0.01)], []))
+    cast(CustomNode, MDP.get_node(lowest_dist_node_name)).depth = 1
+    print("\tRESULT: ", lowest_dist_node_name)
 
     ####### Update the depth, starting from the start node. Make max depth node
     ####### connect to the end node
-    queue = [lowest_reward_node_name]
+    queue = [lowest_dist_node_name]
     visited = set()
-    visited.add(lowest_reward_node_name)
-    max_depth_node = lowest_reward_node_name
+    visited.add(lowest_dist_node_name)
+    max_depth_node = lowest_dist_node_name
 
     while len(queue) > 0:
         node_name = queue.pop(0)

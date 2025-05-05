@@ -25,10 +25,18 @@ class Game:
 
         self.metrics: List[Metric] = []
         for m in json_data['computational-metrics']:
-            self.metrics.append(Metric(
-                resolution=m['resolution'],
-                name = m['name']
-            ))
+            if 'resolution' in m:
+                self.metrics.append(Metric(
+                    resolution=m['resolution'],
+                    name = m['name'],
+                    is_flat = False
+                ))
+            else:
+                self.metrics.append(Metric(
+                    resolution=m['max'],
+                    name = m['name'],
+                    is_flat = True
+                ))
 
         # set up n-grams and markov chains
         self.forward_chain: MarkovChain = MarkovChain(
@@ -74,12 +82,15 @@ class Game:
         else:
             results = self.client.assess(columns_into_rows(level))
 
-        metrics = []
+        metrics: List[float] = []
         for m in self.metrics:
             value = results[m.name]
-            assert value >= 0, f"{m.name} must be >= 0"
-            assert value <= 1, f"{m.name} must be <= 1"
-            metrics.append(value)
+            if m.is_flat:
+               metrics.append(value)
+            else:
+                assert value >= 0, f"{m.name} must be >= 0"
+                assert value <= 1, f"{m.name} must be <= 1"
+                metrics.append(value)
 
         c = results['completability']
         assert c >= 0.0, "Completion value must be >= 0."
