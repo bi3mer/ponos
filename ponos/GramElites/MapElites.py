@@ -48,8 +48,8 @@ class MapElites:
         update_progress(0)
         LEN = self.G.iterations
         for i in range(LEN):
-            parent_1 = sample(self.bins[sample(self.keys, 1)[0]], 1)[0][1]
-            parent_2 = sample(self.bins[sample(self.keys, 1)[0]], 1)[0][1]
+            parent_1 = sample(self.bins[sample(list(self.keys), 1)[0]], 1)[0][1]
+            parent_2 = sample(self.bins[sample(list(self.keys), 1)[0]], 1)[0][1]
 
             for strand in self.crossover.operate(parent_1, parent_2):
                 self.__add_to_bins(self.mutate.operate(strand))

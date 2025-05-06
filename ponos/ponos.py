@@ -6,7 +6,7 @@ from GramElites.MapElites import MapElites
 from GDM.GDM.Graph import Graph
 
 from Utility.ProgressBar import progress_text
-from Utility.Math import euclidean_distance, tuple_add
+from Utility.Math import euclidean_distance, manhattan_distance, tuple_add
 from Utility.Linking import build_links_between_nodes
 from Utility.CustomNode import CustomNode
 from Utility.CustomEdge import CustomEdge
@@ -14,7 +14,7 @@ from Utility.GridTools import columns_into_rows
 from Utility.web import RestClient, SocketClient
 from Game import Game
 
-from random import seed, random
+from random import seed
 from time import time
 import argparse
 import os
@@ -23,6 +23,7 @@ def tuple_to_key(tup: Tuple[float,...]) -> str:
     return '_'.join(str(k) for k in tup)
 
 def main():
+    ###########################################################################
     # Get arguments from command line
     parser = argparse.ArgumentParser(description='Ponos')
     parser.add_argument(
@@ -55,6 +56,7 @@ def main():
 
     args = parser.parse_args()
 
+    ###########################################################################
     # Make sure file won't be overwritten
     mdl_name = args.model_name
     if os.path.exists(mdl_name + '.json'):
@@ -70,6 +72,7 @@ def main():
 
     print(f'Result will be stored at: {mdl_name}')
 
+    ###########################################################################
     # Get config from game server
     if args.use_rest_server:
         client = RestClient(f'http://{args.host}', args.port)
@@ -85,12 +88,14 @@ def main():
     # set up game
     G = Game(client, json_config)
 
-    ####### Gram-Elites
+    ###########################################################################
+    # Run Gram-Elites
     print('Running MAP-Elites...')
     map_elites = MapElites(G)
     map_elites.run()
 
-    ####### Linking
+    ###########################################################################
+    # Run Linking
     level_segments_found = 0
 
     # Add Nodes and finding start node for linking step
@@ -194,8 +199,9 @@ def main():
 
     progress_text(f'Links found: {links_found}', done=True)
 
-    ####### Find node with lowest reward and make it connect to start node, while
-    ####### doing this, we also request the reward from the server
+    ###########################################################################
+    # Find node with lowest reward and make it connect to start node, while
+    # doing this, we also request the reward from the server
     lowest_dist = 10000
     lowest_dist_node_name = ""
     for node_name in MDP.nodes:
@@ -211,29 +217,35 @@ def main():
     cast(CustomNode, MDP.get_node(lowest_dist_node_name)).depth = 1
     print("\tRESULT: ", lowest_dist_node_name)
 
-    ####### Update the depth, starting from the start node. Make max depth node
-    ####### connect to the end node
+    ###########################################################################
+    # Update the depth, starting from the start node. Make max depth node
+    # connect to the end node
     queue = [lowest_dist_node_name]
     visited = set()
     visited.add(lowest_dist_node_name)
     max_depth_node = lowest_dist_node_name
 
+    tuple_low_dist_node = tuple(int(e) for e in lowest_dist_node_name.split('_'))
+
     while len(queue) > 0:
         node_name = queue.pop(0)
         max_depth_node = node_name
 
-        new_depth = cast(CustomNode, MDP.get_node(node_name)).depth + 1
 
         for node_name in MDP.neighbors(node_name):
             if node_name not in visited:
                 visited.add(node_name)
                 queue.append(node_name)
-                cast(CustomNode, MDP.get_node(node_name)).depth = new_depth
+
+                tuple_node = tuple(int(e) for e in node_name.split('_'))
+                dist = manhattan_distance(tuple_low_dist_node, tuple_node)
+                cast(CustomNode, MDP.get_node(node_name)).depth = dist
 
     MDP.add_default_node(node_name="end", terminal=True, reward=G.end_reward)
     MDP.add_edge(CustomEdge(max_depth_node, "end", [(max_depth_node, 0.99), ("death", 0.01)], []))
 
-    ####### Update orientation of the levels
+    ###########################################################################
+    # Update orientation of the levels
     if G.levels_are_horizontal:
         for node_name in MDP.nodes:
             if node_name == 'start' or node_name == 'death' or node_name == 'end':
@@ -249,8 +261,8 @@ def main():
                 if len(e.links[i].link) > 0:
                     e.links[i].link = columns_into_rows(e.links[i].link)
 
-    ####### Store
-    print('Storing the result...')
+    ###########################################################################
+    # Store the results because we are done
     with open(mdl_name, 'w') as f:
         f.write(MDP.to_json_string())
 

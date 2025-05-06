@@ -1,5 +1,14 @@
-from math import sqrt
 from typing import Tuple
+from math import sqrt
+
+def manhattan_distance(a: Tuple[int,...], b: Tuple[int,...]) -> int:
+    assert len(a) == len(b)
+
+    distance = 0
+    for i in range(len(a)):
+        distance += abs(a[i] - b[i])
+
+    return distance
 
 def euclidean_distance(a: Tuple[float,...], b: Tuple[float,...]) -> float:
     assert len(a) == len(b)
@@ -50,3 +59,4 @@ def tuple_add(a: Tuple[float,...], b: Tuple[float,...]) -> Tuple[float, ...]:
     assert len(a) == len(b)
 
     return tuple(a[i] + b[i] for i in range(len(a)))
+
