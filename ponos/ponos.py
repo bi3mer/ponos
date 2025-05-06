@@ -126,14 +126,14 @@ def main():
             MDP.add_node(CustomNode(
                 name = bin_name,
                 reward = -1, # assigned later
-                utility = 0,
+                utility = 0, # assigned later
                 is_terminal = False,
                 neighbors = set(),
                 levels = segments,
-                depth = -1
+                depth = -1   # assigned later
             ))
 
-            D = euclidean_distance(ORIGIN, key)
+            D = manhattan_distance(ORIGIN, key)
             if D < dist:
                 dist = D
                 start_node = key
@@ -167,35 +167,39 @@ def main():
         src_name = tuple_to_key(src)
 
         for dir in DIRECTIONS:
-            tgt = tuple_add(src, dir)
-            tgt_name = tuple_to_key(tgt)
+            tgt = src
+            for _ in range(20):
+                tgt = tuple_add(tgt, dir)
+                tgt_name = tuple_to_key(tgt)
 
-            # If node doesn't exist, go to next direction
-            if not MDP.has_node(tgt_name):
-                continue
+                # If node doesn't exist, go to next direction
+                if not MDP.has_node(tgt_name):
+                    continue
 
-            # create edge
-            links = build_links_between_nodes(
-                cast(CustomNode, MDP.get_node(src_name)),
-                cast(CustomNode, MDP.get_node(tgt_name)),
-                G
-            )
+                # create edge
+                links = build_links_between_nodes(
+                    cast(CustomNode, MDP.get_node(src_name)),
+                    cast(CustomNode, MDP.get_node(tgt_name)),
+                    G
+                )
 
-            if len(links) > 0:
-                links_found += len(links)
-                progress_text(f'Links found: {links_found}')
+                if len(links) > 0:
+                    links_found += len(links)
+                    progress_text(f'Links found: {links_found}')
 
-                MDP.add_edge(CustomEdge(
-                    src=src_name,
-                    tgt=tgt_name,
-                    probability=[(tgt_name, 0.99), ("death", 0.01)],
-                    links=links
-                ))
+                    MDP.add_edge(CustomEdge(
+                        src=src_name,
+                        tgt=tgt_name,
+                        probability=[(tgt_name, 0.99), ("death", 0.01)],
+                        links=links
+                    ))
 
-            # add new target to queue if it has not yet been seen
-            if tgt not in seen:
-                seen.add(tgt)
-                queue.append(tgt)
+                # add new target to queue if it has not yet been seen
+                if tgt not in seen:
+                    seen.add(tgt)
+                    queue.append(tgt)
+
+                break
 
     progress_text(f'Links found: {links_found}', done=True)
 
@@ -230,13 +234,15 @@ def main():
     while len(queue) > 0:
         node_name = queue.pop(0)
         max_depth_node = node_name
+        # new_depth = cast(CustomNode, MDP.get_node(node_name)).depth + 1
 
+        for neighbor in MDP.neighbors(node_name):
+            if neighbor not in visited:
+                visited.add(neighbor)
+                queue.append(neighbor)
+                # cast(CustomNode, MDP.get_node(neighbor)).depth = new_depth
 
-        for node_name in MDP.neighbors(node_name):
-            if node_name not in visited:
-                visited.add(node_name)
-                queue.append(node_name)
-
+                ### Manhattan distance depth
                 tuple_node = tuple(int(e) for e in node_name.split('_'))
                 dist = manhattan_distance(tuple_low_dist_node, tuple_node)
                 cast(CustomNode, MDP.get_node(node_name)).depth = dist
