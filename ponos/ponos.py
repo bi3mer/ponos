@@ -8,7 +8,7 @@ from GDM.GDM.utility import bfs
 from GDM.GDM.Graph import Graph
 
 from Utility.ProgressBar import progress_text
-from Utility.Math import euclidean_distance, manhattan_distance, tuple_add
+from Utility.Math import manhattan_distance, tuple_add, mean
 from Utility.Linking import build_links_between_nodes
 from Utility.CustomNode import CustomNode
 from Utility.CustomEdge import CustomEdge
@@ -97,10 +97,9 @@ def main():
     map_elites.run()
 
     ###########################################################################
-    # Run Linking
+    # Build nodes and find the node that should be connected to the start node
     level_segments_found = 0
 
-    # Add Nodes and finding start node for linking step
     ORIGIN = tuple(0 for _ in range(len(G.metrics)))
     start_node = None
     dist = 1000000
@@ -143,7 +142,8 @@ def main():
     print(f'Built {level_segments_found} level segments.')
     assert start_node != None, "No valid start node found. This means no usable nodes were found, and the search failed."
 
-    # calculate link directions list
+    ###########################################################################
+    # Calculate link directions list
     DIRECTIONS = []
     _base_direction = [0 for _ in range(len(G.metrics))]
     for i in range(len(G.metrics)):
@@ -155,7 +155,9 @@ def main():
         new_direction[i] = -1
         DIRECTIONS.append(new_direction)
 
-    # Add edges with no link or link if valid. Otherwise, don't add.
+    ###########################################################################
+    # Add edges with no link or link if valid. Otherwise, don't add. A BFS
+    # search is used to calculate the depth
     print('Linking edges...')
     links_found = 0
 
@@ -206,20 +208,15 @@ def main():
     progress_text(f'Links found: {links_found}', done=True)
 
     ###########################################################################
-    # Find node with lowest reward and make it connect to start node, while
-    # doing this, we also request the reward from the server
+    # Find node with lowest sum of BCs and make it connect to start node
     min_dist = 10000000
     min_dist_node_name = ""
-    max_dist = 0
-
 
     for node_name in MDP.nodes:
         if node_name == 'start' or node_name == 'death' or node_name == 'end':
             continue
 
         dist = sum(int(b) for b in node_name.split('_'))
-        max_dist = max(dist, max_dist)
-        cast(CustomNode, MDP.get_node(node_name)).depth = dist
 
         if dist < min_dist:
             min_dist = dist
@@ -258,31 +255,7 @@ def main():
     print(f"Nodes left: {len(MDP.nodes)}")
 
     ###########################################################################
-    # Find the node that is furthest from the origin, but still connected to
-    # the start node with a BFS
-    # max_dist = 0
-    # max_dist_node_names = []
-    # seen = set()
-    # seen.add("start")
-    # queue = ["start"]
-
-    # while len(queue) > 0:
-    #     node_name = queue.pop()
-
-    #     for neighbor in MDP.neighbors(node_name):
-    #         if neighbor in seen:
-    #             continue
-
-    #         queue.append(neighbor)
-    #         seen.add(neighbor)
-
-    #         d = cast(CustomNode, MDP.nodes[neighbor]).depth
-    #         if d == max_dist:
-    #             max_dist_node_names.append(neighbor)
-    #         elif d > max_dist:
-    #             max_dist = d
-    #             max_dist_node_names = [neighbor]
-    # Find the node that is furthest from the start node
+    # Find the node(s) furthest from the start node
     max_depth = 0
     max_depth_node_names = []
 
@@ -298,6 +271,7 @@ def main():
             if neighbor in seen:
                 continue
 
+            cast(CustomNode, MDP.get_node(neighbor)).depth = new_depth
             queue.append((neighbor, new_depth))
             seen.add(neighbor)
 
@@ -309,7 +283,7 @@ def main():
 
     print(f"Max depth: {max_depth}")
 
-    # Create the end node, and then create an edge from the max_dist node to
+    # Create the end node, and then create an edge from the max_depth node to
     # the end node
     MDP.add_node(CustomNode(
         name = "end",
@@ -318,7 +292,7 @@ def main():
         is_terminal = True,
         neighbors = set(),
         levels = [], # assigned later
-        depth = max_dist + 1
+        depth = max_depth + 1
     ))
 
     # add edges to the end node
@@ -351,6 +325,24 @@ def main():
                 MDP.remove_node(node_name)
                 nodes.remove(node_name)
                 break
+
+    ###########################################################################
+    # Set the reward for every node in the MDP
+    max_reward = 0
+    for N in MDP.nodes.values():
+        name = N.name
+        if name == 'start' or name == 'death' or name == 'end':
+            continue
+
+        rewards = []
+        for level in cast(CustomNode, N).levels:
+            rewards.append(G.client.reward(level))
+
+        N.reward = mean(rewards)
+        max_reward = max(N.reward, max_reward)
+
+    for N in MDP.nodes.values():
+        N.reward= -(max_reward-N.reward/max_reward)
 
     ###########################################################################
     # Update orientation of the levels

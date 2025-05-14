@@ -45,6 +45,7 @@ max_r = -1
 for N in G['nodes']:
     max_r = max(max_r, N["reward"])
 
+NUM_END_LEVELS = 1
 
 for N in G['nodes']:
     if N["name"] == "start" or N["name"] == "death":
@@ -70,6 +71,10 @@ for N in G['nodes']:
             "XXXXXXXXXXXX",
         ]]
 
+        # node = f'new CustomNode("end", 0, 0, true, [], {json.dumps(L)}, {N["depth"]})'
+        # code += f"AUTO_MDP.addNode({node});\n"
+        # continue
+
     # depth = id.split("-")[0]
     depth = 1 # TODO: set the depth
     is_terminal = "true" if N["name"] == 'end' else "false"
@@ -85,25 +90,35 @@ code += "\n// ========= Edges =========\n"
 for E in G['edges']:
     src = E["src"]
     tgt = E['tgt']
-    P = json.dumps(E["probability"])
 
     if len(E['links']) > 0:
         for L in E['links']:
-            src_index = L["src-index"]
-            tgt_index = L["tgt-index"]
+            src_name = f"{src}-{L['src-index']}"
+            tgt_name = f"{tgt}-{L['tgt-index']}"
             link = json.dumps(L["link"])
+            P = json.dumps([(tgt_name, 0.99), ("death", 0.01)])
 
-            e = f'new CustomEdge("{src}-{src_index}", "{tgt}-{tgt_index}", {P}, {link})'
+            e = f'new CustomEdge("{src_name}", "{tgt_name}", {P}, {link})'
             code += f'AUTO_MDP.addEdge({e});\n'
-            # code += f'\tnew Link({L["src-index"]}, {L["tgt-index"]}, {json.dumps(L["link"])}),\n'
     elif tgt == 'end':
+        P = json.dumps([(tgt, 0.99), ("death", 0.01)])
         for N in G["nodes"]:
             if N["name"] == src:
                 for i in range(len(N["levels"])):
-                    code += f'AUTO_MDP.addDefaultEdge("{src}-{i}", "{tgt}", {P});\n'
+                    src_name = f'{src}-{i}'
+                    for j in range(NUM_END_LEVELS):
+                        tgt_name = f"{tgt}-{j}"
+                        P = json.dumps([(tgt_name, 0.99), ("death", 0.01)])
+                        code += f'AUTO_MDP.addDefaultEdge("{src_name}", "{tgt_name}", {P});\n'
                 break
-    else:
-      code += f'AUTO_MDP.addDefaultEdge("{src}", "{tgt}", {P});\n'
+    elif src == "start":
+        for N in G["nodes"]:
+            if N["name"] == tgt:
+                for i in range(len(N["levels"])):
+                    tgt_name = f"{tgt}-{i}"
+                    P = json.dumps([(tgt_name, 0.99), ("death", 0.01)])
+                    code += f'AUTO_MDP.addDefaultEdge("{src}", "{tgt_name}", {P});\n'
+                break
 
 PATH = os.path.join("autoMDP.ts")
 with open(PATH, "w") as f:
