@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 
+from re import A
 from typing import List, Tuple, cast
 
 from GramElites.MapElites import MapElites
+from GDM.GDM.utility import bfs
 from GDM.GDM.Graph import Graph
 
 from Utility.ProgressBar import progress_text
@@ -168,7 +170,7 @@ def main():
 
         for dir in DIRECTIONS:
             tgt = src
-            for _ in range(20):
+            for _ in range(20): # TODO: this is bad, should be smarter
                 tgt = tuple_add(tgt, dir)
                 tgt_name = tuple_to_key(tgt)
 
@@ -206,49 +208,149 @@ def main():
     ###########################################################################
     # Find node with lowest reward and make it connect to start node, while
     # doing this, we also request the reward from the server
-    lowest_dist = 10000
-    lowest_dist_node_name = ""
+    min_dist = 10000000
+    min_dist_node_name = ""
+    max_dist = 0
+
+
     for node_name in MDP.nodes:
         if node_name == 'start' or node_name == 'death' or node_name == 'end':
             continue
 
         dist = sum(int(b) for b in node_name.split('_'))
-        if dist < lowest_dist:
-            lowest_dist = dist
-            lowest_dist_node_name = node_name
+        max_dist = max(dist, max_dist)
+        cast(CustomNode, MDP.get_node(node_name)).depth = dist
 
-    MDP.add_edge(CustomEdge("start", lowest_dist_node_name, [(lowest_dist_node_name, 0.99), ("death", 0.01)], []))
-    cast(CustomNode, MDP.get_node(lowest_dist_node_name)).depth = 1
-    print("\tRESULT: ", lowest_dist_node_name)
+        if dist < min_dist:
+            min_dist = dist
+            min_dist_node_name = node_name
+
+    # edge from start node to minimum distance node
+    MDP.add_edge(CustomEdge(
+        src="start",
+        tgt=min_dist_node_name,
+        probability=[(min_dist_node_name, 0.99), ("death", 0.01)],
+        links=[]
+    ))
 
     ###########################################################################
-    # Update the depth, starting from the start node. Make max depth node
-    # connect to the end node
-    queue = [lowest_dist_node_name]
-    visited = set()
-    visited.add(lowest_dist_node_name)
-    max_depth_node = lowest_dist_node_name
+    # Remove any node that is not connected to the start node
+    nodes_removed = 0
+    removing_nodes = True
+    nodes = list(MDP.nodes.keys())
+    nodes.remove("start")
+    nodes.remove("death")
 
-    tuple_low_dist_node = tuple(int(e) for e in lowest_dist_node_name.split('_'))
+    while removing_nodes:
+        removing_nodes = False
+        for node_name in nodes:
+            path = bfs(MDP, "start", node_name)
+            if path == None:
+                nodes_removed += 1
+                removing_nodes = True
+
+                print(f'removed: {node_name}')
+                MDP.remove_node(node_name)
+                nodes.remove(node_name)
+                break
+
+    print(f"Nodes without a path to start: {nodes_removed}")
+    print(f"Nodes left: {len(MDP.nodes)}")
+
+    ###########################################################################
+    # Find the node that is furthest from the origin, but still connected to
+    # the start node with a BFS
+    # max_dist = 0
+    # max_dist_node_names = []
+    # seen = set()
+    # seen.add("start")
+    # queue = ["start"]
+
+    # while len(queue) > 0:
+    #     node_name = queue.pop()
+
+    #     for neighbor in MDP.neighbors(node_name):
+    #         if neighbor in seen:
+    #             continue
+
+    #         queue.append(neighbor)
+    #         seen.add(neighbor)
+
+    #         d = cast(CustomNode, MDP.nodes[neighbor]).depth
+    #         if d == max_dist:
+    #             max_dist_node_names.append(neighbor)
+    #         elif d > max_dist:
+    #             max_dist = d
+    #             max_dist_node_names = [neighbor]
+    # Find the node that is furthest from the start node
+    max_depth = 0
+    max_depth_node_names = []
+
+    seen = set()
+    seen.add("start")
+    queue = [("start", 0)]
 
     while len(queue) > 0:
-        node_name = queue.pop(0)
-        max_depth_node = node_name
-        # new_depth = cast(CustomNode, MDP.get_node(node_name)).depth + 1
+        node_name, depth = queue.pop(0)
+        new_depth = depth + 1
 
         for neighbor in MDP.neighbors(node_name):
-            if neighbor not in visited:
-                visited.add(neighbor)
-                queue.append(neighbor)
-                # cast(CustomNode, MDP.get_node(neighbor)).depth = new_depth
+            if neighbor in seen:
+                continue
 
-                ### Manhattan distance depth
-                tuple_node = tuple(int(e) for e in node_name.split('_'))
-                dist = manhattan_distance(tuple_low_dist_node, tuple_node)
-                cast(CustomNode, MDP.get_node(node_name)).depth = dist
+            queue.append((neighbor, new_depth))
+            seen.add(neighbor)
 
-    MDP.add_default_node(node_name="end", terminal=True, reward=G.end_reward)
-    MDP.add_edge(CustomEdge(max_depth_node, "end", [(max_depth_node, 0.99), ("death", 0.01)], []))
+            if new_depth == max_depth:
+                max_depth_node_names.append(neighbor)
+            elif new_depth > max_depth:
+                max_depth = new_depth
+                max_depth_node_names = [neighbor]
+
+    print(f"Max depth: {max_depth}")
+
+    # Create the end node, and then create an edge from the max_dist node to
+    # the end node
+    MDP.add_node(CustomNode(
+        name = "end",
+        reward = G.end_reward,
+        utility = 0, # assigned later
+        is_terminal = True,
+        neighbors = set(),
+        levels = [], # assigned later
+        depth = max_dist + 1
+    ))
+
+    # add edges to the end node
+    for n in max_depth_node_names:
+        print(f"Adding edge: {n} -> 'end'")
+        MDP.add_edge(CustomEdge(
+            src=n,
+            tgt="end",
+            probability=[("end", 0.99), ("death", 0.01)],
+            links=[]
+        ))
+
+    print("\tFirst: ", min_dist_node_name)
+    print("\tLast:  ", max_depth_node_names)
+
+    ###########################################################################
+    # Make sure there is a path to the end node from wherever we are in the
+    # graph
+    nodes_removed = 0
+    removing_nodes = True
+    while removing_nodes:
+        removing_nodes = False
+        for node_name in nodes:
+            path = bfs(MDP, node_name, "end")
+            if path == None:
+                nodes_removed += 1
+                removing_nodes = True
+
+                print(f'removed: {node_name}')
+                MDP.remove_node(node_name)
+                nodes.remove(node_name)
+                break
 
     ###########################################################################
     # Update orientation of the levels
