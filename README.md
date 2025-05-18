@@ -6,6 +6,15 @@ Ponos is a tool for building a [Markov Decision Process (MDP)](https://en.wikipe
 - [Paper](https://arxiv.org/pdf/2203.05057), [Repo](https://github.com/bi3mer/LinkingLevelSegments)
 - [Paper](https://arxiv.org/pdf/2304.13922), [Repo](https://github.com/bi3mer/mdp-level-assembly)
 
+## Install
+
+```bash
+git clone https://github.com/bi3mer/ponos
+cd ponos
+git submodule init
+git submodule update
+```
+
 ## Usage
 
 Ponos works by interacting with a socket server or a REST server. For the command below to work, the server must be running. Examples of kinds of servers can be seen in the [examples repo](https://github.com/bi3mer/ponos-example). Fair warning, sockets are, unsurprisingly, a lot faster, so I recommend using them.
