@@ -1,13 +1,12 @@
 #!/usr/bin/env python
 
-from re import A
 from typing import List, Tuple, cast
 
 from GramElites.MapElites import MapElites
 from GDM.GDM.utility import bfs
 from GDM.GDM.Graph import Graph
 
-from Utility.ProgressBar import progress_text
+from Utility.ProgressBar import progress_text, update_progress
 from Utility.Math import manhattan_distance, tuple_add, mean
 from Utility.Linking import build_links_between_nodes
 from Utility.CustomNode import CustomNode
@@ -144,35 +143,35 @@ def main():
 
     ###########################################################################
     # Calculate link directions list
-    DIRECTIONS = []
+    POSITIVE_DIRECTIONS = []
+    NEGATIVE_DIRECTIONS = []
     _base_direction = [0 for _ in range(len(G.metrics))]
     for i in range(len(G.metrics)):
         new_direction = _base_direction.copy()
         new_direction[i] = 1
-        DIRECTIONS.append(new_direction)
+        POSITIVE_DIRECTIONS.append(new_direction)
 
         new_direction = _base_direction.copy()
         new_direction[i] = -1
-        DIRECTIONS.append(new_direction)
+        NEGATIVE_DIRECTIONS.append(new_direction)
 
     ###########################################################################
-    # Add edges with no link or link if valid. Otherwise, don't add. A BFS
-    # search is used to calculate the depth
+    # Find every possible link
     print('Linking edges...')
-    links_found = 0
-
     seen = set()
     seen.add(start_node)
     queue = [start_node]
+    possible_links: List[Tuple[str, str]] = []
 
-    progress_text(f'Links found: {links_found}')
     while len(queue) != 0:
+        progress_text(f'Possible links: {len(possible_links)}')
         src = queue.pop()
         src_name = tuple_to_key(src)
 
-        for dir in DIRECTIONS:
+        found = False
+        for dir in POSITIVE_DIRECTIONS:
             tgt = src
-            for _ in range(20): # TODO: this is bad, should be smarter
+            for _ in range(40): # TODO: this is bad, should be smarter
                 tgt = tuple_add(tgt, dir)
                 tgt_name = tuple_to_key(tgt)
 
@@ -180,32 +179,66 @@ def main():
                 if not MDP.has_node(tgt_name):
                     continue
 
-                # create edge
-                links = build_links_between_nodes(
-                    cast(CustomNode, MDP.get_node(src_name)),
-                    cast(CustomNode, MDP.get_node(tgt_name)),
-                    G
-                )
-
-                if len(links) > 0:
-                    links_found += len(links)
-                    progress_text(f'Links found: {links_found}')
-
-                    MDP.add_edge(CustomEdge(
-                        src=src_name,
-                        tgt=tgt_name,
-                        probability=[(tgt_name, 0.99), ("death", 0.01)],
-                        links=links
-                    ))
+                found = True
+                possible_links.append((src_name, tgt_name))
 
                 # add new target to queue if it has not yet been seen
                 if tgt not in seen:
                     seen.add(tgt)
                     queue.append(tgt)
+                    break
 
-                break
+        # If there is no possibel path forward, then try in a negative direction
+        # to save the work already done
+        if not found:
+            # duplicate code but its convenient for now
+            for dir in NEGATIVE_DIRECTIONS:
+                tgt = src
+                for _ in range(40): # TODO: this is bad, should be smarter
+                    tgt = tuple_add(tgt, dir)
+                    tgt_name = tuple_to_key(tgt)
 
-    progress_text(f'Links found: {links_found}', done=True)
+                    # If node doesn't exist, go to next direction
+                    if not MDP.has_node(tgt_name):
+                        continue
+
+                    found = True
+                    possible_links.append((src_name, tgt_name))
+
+                    # add new target to queue if it has not yet been seen
+                    if tgt not in seen:
+                        seen.add(tgt)
+                        queue.append(tgt)
+                        break
+
+    progress_text(f'Possible links: {len(possible_links)}', done=True)
+
+    ###########################################################################
+    # Run linking. Note, a better implementation would use some threading so
+    # with multiple ports to the server
+    success_links = 0
+    total = 0
+    progress_text(f'Links made: {success_links}/{total}')
+
+    for i, (src_name, tgt_name) in enumerate(possible_links):
+        total += 1
+        # create edge
+        links = build_links_between_nodes(
+            cast(CustomNode, MDP.get_node(src_name)),
+            cast(CustomNode, MDP.get_node(tgt_name)),
+            G
+        )
+
+        if len(links) > 0:
+            success_links += 1
+            progress_text(f'Links made: {success_links}/{total}')
+
+            MDP.add_edge(CustomEdge(
+                src=src_name,
+                tgt=tgt_name,
+                probability=[(tgt_name, 0.99), ("death", 0.01)],
+                links=links
+            ))
 
     ###########################################################################
     # Find node with lowest sum of BCs and make it connect to start node
@@ -246,7 +279,6 @@ def main():
                 nodes_removed += 1
                 removing_nodes = True
 
-                print(f'removed: {node_name}')
                 MDP.remove_node(node_name)
                 nodes.remove(node_name)
                 break
@@ -321,15 +353,20 @@ def main():
                 nodes_removed += 1
                 removing_nodes = True
 
-                print(f'removed: {node_name}')
                 MDP.remove_node(node_name)
                 nodes.remove(node_name)
                 break
 
+        progress_text(f"Nodes removed: {nodes_removed}", done=not removing_nodes)
+
     ###########################################################################
     # Set the reward for every node in the MDP
     max_reward = 0
-    for N in MDP.nodes.values():
+    print("Updating node rewards...")
+    NUM_NODES = len(MDP.nodes)
+    for i, N in enumerate(MDP.nodes.values()):
+        update_progress(i/NUM_NODES)
+
         name = N.name
         if name == 'start' or name == 'death' or name == 'end':
             continue
@@ -340,6 +377,8 @@ def main():
 
         N.reward = mean(rewards)
         max_reward = max(N.reward, max_reward)
+
+    update_progress(1.0)
 
     for N in MDP.nodes.values():
         N.reward= -(max_reward-N.reward/max_reward)
