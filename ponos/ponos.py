@@ -8,7 +8,7 @@ from GDM.GDM.Graph import Graph
 
 from Utility.ProgressBar import progress_text, update_progress
 from Utility.Math import manhattan_distance, tuple_add, mean
-from Utility.Linking import build_links_between_nodes
+from Utility.Linking import  tree_search_link
 from Utility.CustomNode import CustomNode
 from Utility.CustomEdge import CustomEdge
 from Utility.GridTools import columns_into_rows
@@ -120,16 +120,16 @@ def main():
             if elite[0] == 0.0 and elite[1] not in segments:
                 segments.append(elite[1])
 
-        if len(segments) > 0:
-            level_segments_found += len(segments)
+        level_segments_found += len(segments)
+        for i in range(len(segments)):
 
             MDP.add_node(CustomNode(
-                name = bin_name,
+                name = f"{bin_name}-{i}",
                 reward = -1, # assigned later
                 utility = 0, # assigned later
                 is_terminal = False,
                 neighbors = set(),
-                levels = segments,
+                level = segments[i],
                 depth = -1   # assigned later
             ))
 
@@ -166,7 +166,16 @@ def main():
     while len(queue) != 0:
         progress_text(f'Possible links: {len(possible_links)}')
         src = queue.pop()
-        src_name = tuple_to_key(src)
+
+        src_names = []
+        for i in range(G.elites_per_bin):
+            name = f"{tuple_to_key(src)}-{i}"
+            if name in MDP.nodes:
+                src_names.append(name)
+            else:
+                break
+
+        assert len(src_names) > 0
 
         found = False
         for dir in POSITIVE_DIRECTIONS:
@@ -175,41 +184,56 @@ def main():
                 tgt = tuple_add(tgt, dir)
                 tgt_name = tuple_to_key(tgt)
 
-                # If node doesn't exist, go to next direction
-                if not MDP.has_node(tgt_name):
-                    continue
+                should_break = False
+                for i in range(G.elites_per_bin):
+                    tgt_name = f"{tgt_name}-{i}"
 
-                found = True
-                possible_links.append((src_name, tgt_name))
+                    if MDP.has_node(tgt_name):
+                        should_break = True
+                        found = True
+                        for src_name in src_names:
+                            possible_links.append((src_name, tgt_name))
 
-                # add new target to queue if it has not yet been seen
-                if tgt not in seen:
-                    seen.add(tgt)
-                    queue.append(tgt)
+                        # add new target to queue if it has not yet been seen
+                        if tgt not in seen:
+                            seen.add(tgt)
+                            queue.append(tgt)
+                            break
+
+                if should_break:
                     break
 
-        # If there is no possibel path forward, then try in a negative direction
+        # If there is no possible path forward, then try in a negative direction
         # to save the work already done
-        if not found:
-            # duplicate code but its convenient for now
-            for dir in NEGATIVE_DIRECTIONS:
-                tgt = src
-                for _ in range(40): # TODO: this is bad, should be smarter
-                    tgt = tuple_add(tgt, dir)
-                    tgt_name = tuple_to_key(tgt)
+        if found:
+            continue
 
-                    # If node doesn't exist, go to next direction
-                    if not MDP.has_node(tgt_name):
-                        continue
+        # duplicate code, but convenient
+        for dir in NEGATIVE_DIRECTIONS:
+            tgt = src
+            for _ in range(40): # TODO: this is bad, should be smarter
+                tgt = tuple_add(tgt, dir)
+                tgt_name = tuple_to_key(tgt)
 
-                    found = True
-                    possible_links.append((src_name, tgt_name))
+                should_break = False
+                for i in range(G.elites_per_bin):
+                    tgt_name = f"{tgt_name}-{i}"
 
-                    # add new target to queue if it has not yet been seen
-                    if tgt not in seen:
-                        seen.add(tgt)
-                        queue.append(tgt)
-                        break
+                    if MDP.has_node(tgt_name):
+                        should_break = True
+                        found = True
+                        for src_name in src_names:
+                            possible_links.append((src_name, tgt_name))
+
+                        # add new target to queue if it has not yet been seen
+                        if tgt not in seen:
+                            seen.add(tgt)
+                            queue.append(tgt)
+                            break
+
+                if should_break:
+                    break
+
 
     progress_text(f'Possible links: {len(possible_links)}', done=True)
 
@@ -218,27 +242,29 @@ def main():
     # with multiple ports to the server
     success_links = 0
     total = 0
-    progress_text(f'Links made: {success_links}/{total}')
 
     for i, (src_name, tgt_name) in enumerate(possible_links):
+        progress_text(f'Links made: {success_links}/{total}')
         total += 1
-        # create edge
-        links = build_links_between_nodes(
-            cast(CustomNode, MDP.get_node(src_name)),
-            cast(CustomNode, MDP.get_node(tgt_name)),
-            G
-        )
+        src_node = cast(CustomNode, MDP.get_node(src_name))
+        tgt_node = cast(CustomNode, MDP.get_node(tgt_name))
 
-        if len(links) > 0:
-            success_links += 1
-            progress_text(f'Links made: {success_links}/{total}')
+        # Try to create a link
+        link = tree_search_link(src_node.level, tgt_node.level, G)
+        if link == None:
+            continue # failed keep going
 
-            MDP.add_edge(CustomEdge(
-                src=src_name,
-                tgt=tgt_name,
-                probability=[(tgt_name, 0.99), ("death", 0.01)],
-                links=links
-            ))
+        # otherwise, success and make the link
+        success_links += 1
+        MDP.add_edge(CustomEdge(
+            src=src_name,
+            tgt=tgt_name,
+            probability=[(tgt_name, 0.99), ("death", 0.01)],
+            link=link
+        ))
+
+
+    progress_text(f'Links made: {success_links}/{total}', done=True)
 
     ###########################################################################
     # Find node with lowest sum of BCs and make it connect to start node
@@ -246,10 +272,10 @@ def main():
     min_dist_node_name = ""
 
     for node_name in MDP.nodes:
-        if node_name == 'start' or node_name == 'death' or node_name == 'end':
+        if "start" in node_name or "death" in node_name or "end" in node_name:
             continue
 
-        dist = sum(int(b) for b in node_name.split('_'))
+        dist = sum(int(b) for b in node_name.split('-')[0].split('_'))
 
         if dist < min_dist:
             min_dist = dist
@@ -260,7 +286,7 @@ def main():
         src="start",
         tgt=min_dist_node_name,
         probability=[(min_dist_node_name, 0.99), ("death", 0.01)],
-        links=[]
+        link=[]
     ))
 
     ###########################################################################
@@ -323,7 +349,7 @@ def main():
         utility = 0, # assigned later
         is_terminal = True,
         neighbors = set(),
-        levels = [], # assigned later
+        level = [], # assigned later
         depth = max_depth + 1
     ))
 
@@ -334,7 +360,7 @@ def main():
             src=n,
             tgt="end",
             probability=[("end", 0.99), ("death", 0.01)],
-            links=[]
+            link=[]
         ))
 
     print("\tFirst: ", min_dist_node_name)
@@ -371,11 +397,7 @@ def main():
         if name == 'start' or name == 'death' or name == 'end':
             continue
 
-        rewards = []
-        for level in cast(CustomNode, N).levels:
-            rewards.append(G.client.reward(level))
-
-        N.reward = mean(rewards)
+        N.reward = G.client.reward(N.level)
         max_reward = max(N.reward, max_reward)
 
     update_progress(1.0)
@@ -391,14 +413,13 @@ def main():
                 continue
 
             node = cast(CustomNode, MDP.nodes[node_name])
-            for i in range(len(node.levels)):
-                node.levels[i] = columns_into_rows(node.levels[i])
+            node.level = columns_into_rows(node.level)
 
         for edge_name in MDP.edges:
             e = cast(CustomEdge, MDP.edges[edge_name])
-            for i in range(len(e.links)):
-                if len(e.links[i].link) > 0:
-                    e.links[i].link = columns_into_rows(e.links[i].link)
+
+            if len(e.link) > 0:
+                e.link = columns_into_rows(e.link)
 
     ###########################################################################
     # Store the results because we are done

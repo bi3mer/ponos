@@ -1,8 +1,6 @@
 from typing import List, Optional
 from collections import deque
 
-from Utility.CustomNode import CustomNode
-from Utility.Link import Link
 from Game import Game
 
 '''
@@ -47,19 +45,3 @@ def tree_search_link(start: List[str], end: List[str], G: Game) -> Optional[List
 
     return None
 
-
-def build_links_between_nodes(src: CustomNode, tgt: CustomNode, G: Game) -> List[Link]:
-    links = []
-    for src_index, src_segment in enumerate(src.levels):
-        for tgt_index, tgt_segment in enumerate(tgt.levels):
-            link = tree_search_link(src_segment, tgt_segment, G)
-            if link == None:
-                continue
-
-            links.append(Link(
-               src_segment_index = src_index,
-               tgt_segment_index = tgt_index,
-               link = link
-            ))
-
-    return links

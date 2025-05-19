@@ -31,7 +31,7 @@ for n in graph['nodes']:
         utility = 0, # assigned later
         is_terminal = False,
         neighbors = set(),
-        levels = n['levels'],
+        level = n['levels'],
         depth = n['depth']   # assigned later
     ))
 
@@ -40,7 +40,7 @@ for e in graph['edges']:
         src=e['src'],
         tgt=e['tgt'],
         probability=e['probability'],
-        links=e['links']
+        link=e['links']
     ))
 
 # All nodes must have a path to the start node
@@ -102,7 +102,7 @@ for n in max_dist_node_names:
         src=n,
         tgt="end",
         probability=[("end", 0.99), ("death", 0.01)],
-        links=[]
+        link=[]
     ))
 
 # Make sure there is a path to the end node from wherever we are in the graph

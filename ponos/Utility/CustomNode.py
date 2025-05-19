@@ -4,12 +4,12 @@ from GDM.GDM.Graph.Node import Node
 
 @dataclass
 class CustomNode(Node):
-    levels: List[List[str]]
+    level: List[str]
     depth: int
 
     def to_dictionary(self) -> Dict[str, Any]:
         D = super().to_dictionary()
-        D['levels'] = self.levels
+        D['level'] = self.level
         D['depth'] = self.depth
 
         return D
