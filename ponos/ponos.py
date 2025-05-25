@@ -98,11 +98,6 @@ def main():
     ###########################################################################
     # Build nodes and find the node that should be connected to the start node
     level_segments_found = 0
-
-    ORIGIN = tuple(0 for _ in range(len(G.metrics)))
-    start_node = None
-    dist = 1000000
-
     print('Adding nodes...')
     BINS = map_elites.bins
     MDP = Graph()
@@ -122,7 +117,6 @@ def main():
 
         level_segments_found += len(segments)
         for i in range(len(segments)):
-
             MDP.add_node(CustomNode(
                 name = f"{bin_name}-{i}",
                 reward = -1, # assigned later
@@ -133,143 +127,13 @@ def main():
                 depth = -1   # assigned later
             ))
 
-            D = manhattan_distance(ORIGIN, key)
-            if D < dist:
-                dist = D
-                start_node = key
 
     print(f'Built {level_segments_found} level segments.')
-    assert start_node != None, "No valid start node found. This means no usable nodes were found, and the search failed."
-
-    ###########################################################################
-    # Calculate link directions list
-    POSITIVE_DIRECTIONS = []
-    NEGATIVE_DIRECTIONS = []
-    _base_direction = [0 for _ in range(len(G.metrics))]
-    for i in range(len(G.metrics)):
-        new_direction = _base_direction.copy()
-        new_direction[i] = 1
-        POSITIVE_DIRECTIONS.append(new_direction)
-
-        new_direction = _base_direction.copy()
-        new_direction[i] = -1
-        NEGATIVE_DIRECTIONS.append(new_direction)
-
-    ###########################################################################
-    # Find every possible link
-    print('Linking edges...')
-    seen = set()
-    seen.add(start_node)
-    queue = [start_node]
-    possible_links: List[Tuple[str, str]] = []
-
-    while len(queue) != 0:
-        progress_text(f'Possible links: {len(possible_links)}')
-        src = queue.pop()
-
-        src_names = []
-        for i in range(G.elites_per_bin):
-            name = f"{tuple_to_key(src)}-{i}"
-            if name in MDP.nodes:
-                src_names.append(name)
-            else:
-                break
-
-        assert len(src_names) > 0
-
-        found = False
-        for dir in POSITIVE_DIRECTIONS:
-            tgt = src
-            for _ in range(40): # TODO: this is bad, should be smarter
-                tgt = tuple_add(tgt, dir)
-                tgt_name = tuple_to_key(tgt)
-
-                should_break = False
-                for i in range(G.elites_per_bin):
-                    tgt_name = f"{tgt_name}-{i}"
-
-                    if MDP.has_node(tgt_name):
-                        should_break = True
-                        found = True
-                        for src_name in src_names:
-                            possible_links.append((src_name, tgt_name))
-
-                        # add new target to queue if it has not yet been seen
-                        if tgt not in seen:
-                            seen.add(tgt)
-                            queue.append(tgt)
-                            break
-
-                if should_break:
-                    break
-
-        # If there is no possible path forward, then try in a negative direction
-        # to save the work already done
-        if found:
-            continue
-
-        # duplicate code, but convenient
-        for dir in NEGATIVE_DIRECTIONS:
-            tgt = src
-            for _ in range(40): # TODO: this is bad, should be smarter
-                tgt = tuple_add(tgt, dir)
-                tgt_name = tuple_to_key(tgt)
-
-                should_break = False
-                for i in range(G.elites_per_bin):
-                    tgt_name = f"{tgt_name}-{i}"
-
-                    if MDP.has_node(tgt_name):
-                        should_break = True
-                        found = True
-                        for src_name in src_names:
-                            possible_links.append((src_name, tgt_name))
-
-                        # add new target to queue if it has not yet been seen
-                        if tgt not in seen:
-                            seen.add(tgt)
-                            queue.append(tgt)
-                            break
-
-                if should_break:
-                    break
-
-
-    progress_text(f'Possible links: {len(possible_links)}', done=True)
-
-    ###########################################################################
-    # Run linking. Note, a better implementation would use some threading so
-    # with multiple ports to the server
-    success_links = 0
-    total = 0
-
-    for i, (src_name, tgt_name) in enumerate(possible_links):
-        progress_text(f'Links made: {success_links}/{total}')
-        total += 1
-        src_node = cast(CustomNode, MDP.get_node(src_name))
-        tgt_node = cast(CustomNode, MDP.get_node(tgt_name))
-
-        # Try to create a link
-        link = tree_search_link(src_node.level, tgt_node.level, G)
-        if link == None:
-            continue # failed keep going
-
-        # otherwise, success and make the link
-        success_links += 1
-        MDP.add_edge(CustomEdge(
-            src=src_name,
-            tgt=tgt_name,
-            probability=[(tgt_name, 0.99), ("death", 0.01)],
-            link=link
-        ))
-
-
-    progress_text(f'Links made: {success_links}/{total}', done=True)
 
     ###########################################################################
     # Find node with lowest sum of BCs and make it connect to start node
     min_dist = 10000000
-    min_dist_node_name = ""
+    first_nodes = []
 
     for node_name in MDP.nodes:
         if "start" in node_name or "death" in node_name or "end" in node_name:
@@ -279,15 +143,131 @@ def main():
 
         if dist < min_dist:
             min_dist = dist
-            min_dist_node_name = node_name
+            first_nodes = [node_name]
+        elif dist == min_dist:
+            first_nodes.append(node_name)
 
     # edge from start node to minimum distance node
-    MDP.add_edge(CustomEdge(
-        src="start",
-        tgt=min_dist_node_name,
-        probability=[(min_dist_node_name, 0.99), ("death", 0.01)],
-        link=[]
-    ))
+    for node_name in first_nodes:
+        print(f"start -> {node_name}")
+        MDP.add_edge(CustomEdge(
+            src="start",
+            tgt=node_name,
+            probability=[(node_name, 0.99), ("death", 0.01)],
+            link=[]
+        ))
+
+    ###########################################################################
+    # Calculate link directions list
+    DIRECTIONS = []
+    _base_direction = [0 for _ in range(len(G.metrics))]
+    for i in range(len(G.metrics)):
+        new_direction = _base_direction.copy()
+        new_direction[i] = 1
+        DIRECTIONS.append(new_direction)
+
+        new_direction = _base_direction.copy()
+        new_direction[i] = -1
+        DIRECTIONS.append(new_direction)
+
+    ###########################################################################
+    # Find every possible link
+    print('Linking edges...')
+    linking_edges = True
+    while linking_edges:
+        linking_edges = False
+
+        seen = set(first_nodes)
+        queue = []
+        for node_name in first_nodes:
+            queue.append(tuple(int(x) for x in node_name.split('-')[0].split('_')))
+
+        possible_links: List[Tuple[str, str]] = []
+
+        while len(queue) != 0:
+            progress_text(f'Possible links: {len(possible_links)}')
+            src = queue.pop()
+
+            src_names = []
+            for i in range(G.elites_per_bin):
+                name = f"{tuple_to_key(src)}-{i}"
+                if name in MDP.nodes:
+                    src_names.append(name)
+                else:
+                    break
+
+            assert len(src_names) > 0
+
+            for dir in DIRECTIONS:
+                tgt = src
+                for _ in range(70): # TODO: this is bad, should be smarter
+                    tgt = tuple_add(tgt, dir)
+                    tgt_name = tuple_to_key(tgt)
+
+                    should_break = False
+                    for i in range(G.elites_per_bin):
+                        tgt_name = f"{tgt_name}-{i}"
+
+                        if MDP.has_node(tgt_name):
+                            should_break = True
+                            for src_name in src_names:
+                                possible_links.append((src_name, tgt_name))
+
+                            # add new target to queue if it has not yet been seen
+                            if tgt not in seen:
+                                seen.add(tgt)
+                                queue.append(tgt)
+                                break
+
+                    if should_break:
+                        break
+
+        progress_text(f'Possible links: {len(possible_links)}', done=True)
+
+        # Run linking. Note, a better implementation would use some threading so
+        # with multiple ports to the server
+        success_links = 0
+        total = 0
+
+        for i, (src_name, tgt_name) in enumerate(possible_links):
+            if MDP.has_edge(src_name, tgt_name):
+                success_links += 1
+                total += 1
+                continue
+
+            progress_text(f'Links made: {success_links}/{total}')
+            total += 1
+            src_node = cast(CustomNode, MDP.get_node(src_name))
+            tgt_node = cast(CustomNode, MDP.get_node(tgt_name))
+
+            # Try to create a link
+            link = tree_search_link(src_node.level, tgt_node.level, G)
+            if link == None:
+                continue # failed keep going
+
+            # otherwise, success and make the link
+            success_links += 1
+            MDP.add_edge(CustomEdge(
+                src=src_name,
+                tgt=tgt_name,
+                probability=[(tgt_name, 0.99), ("death", 0.01)],
+                link=link
+            ))
+
+        progress_text(f'Links made: {success_links}/{total}', done=True)
+
+        # Check for terminal nodes and remove them. If a terminal node is found, then
+        # linking should run again
+        nodes_to_remove = [N.name for N in MDP.nodes.values() if len(N.neighbors) == 0]
+        for name in nodes_to_remove:
+            if name == "death" or name == "end":
+                continue
+
+            print(f"removing node: {name}")
+            MDP.remove_node(name)
+            linking_edges = True
+
+        print(f"Done linking: {not linking_edges}")
 
     ###########################################################################
     # Remove any node that is not connected to the start node
@@ -302,6 +282,7 @@ def main():
         for node_name in nodes:
             path = bfs(MDP, "start", node_name)
             if path == None:
+                print(node_name)
                 nodes_removed += 1
                 removing_nodes = True
 
@@ -309,7 +290,7 @@ def main():
                 nodes.remove(node_name)
                 break
 
-    print(f"Nodes without a path to start: {nodes_removed}")
+    print(f"Nodes that can't be reached from start: {nodes_removed}")
     print(f"Nodes left: {len(MDP.nodes)}")
 
     ###########################################################################
@@ -363,7 +344,7 @@ def main():
             link=[]
         ))
 
-    print("\tFirst: ", min_dist_node_name)
+    print("\tFirst: ", first_nodes)
     print("\tLast:  ", max_depth_node_names)
 
     ###########################################################################
