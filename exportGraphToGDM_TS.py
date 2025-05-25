@@ -74,7 +74,7 @@ for N in G['nodes']:
     is_terminal = "true" if N["name"] == 'end' else "false"
 
     name = N["name"]
-    reward = -(max_r-N["reward"])/max_r
+    reward = (N["reward"] / max_r) - 1
     depth = N["depth"]
     node = f'new CustomNode("{name}", {reward}, 0, {is_terminal}, [], {json.dumps(N["level"])}, {depth})'
     code += f"AUTO_MDP.addNode({node});\n"
@@ -86,38 +86,8 @@ for E in G['edges']:
     link = json.dumps(E["link"])
     P = json.dumps([(tgt, 0.99), ("death", 0.01)])
 
-
     e = f'new CustomEdge("{src}", "{tgt}", {P}, {link})'
     code += f'AUTO_MDP.addEdge({e});\n'
-
-    # if len(E['links']) > 0:
-    #     for L in E['links']:
-    #         src_name = f"{src}-{L['src-index']}"
-    #         tgt_name = f"{tgt}-{L['tgt-index']}"
-    #         link = json.dumps(L["link"])
-    #         P = json.dumps([(tgt_name, 0.99), ("death", 0.01)])
-
-    #         e = f'new CustomEdge("{src_name}", "{tgt_name}", {P}, {link})'
-    #         code += f'AUTO_MDP.addEdge({e});\n'
-    # elif tgt == 'end':
-    #     P = json.dumps([(tgt, 0.99), ("death", 0.01)])
-    #     for N in G["nodes"]:
-    #         if N["name"] == src:
-    #             for i in range(len(N["levels"])):
-    #                 src_name = f'{src}-{i}'
-    #                 for j in range(NUM_END_LEVELS):
-    #                     tgt_name = f"{tgt}-{j}"
-    #                     P = json.dumps([(tgt_name, 0.99), ("death", 0.01)])
-    #                     code += f'AUTO_MDP.addDefaultEdge("{src_name}", "{tgt_name}", {P});\n'
-    #             break
-    # elif src == "start":
-    #     for N in G["nodes"]:
-    #         if N["name"] == tgt:
-    #             for i in range(len(N["levels"])):
-    #                 tgt_name = f"{tgt}-{i}"
-    #                 P = json.dumps([(tgt_name, 0.99), ("death", 0.01)])
-    #                 code += f'AUTO_MDP.addDefaultEdge("{src}", "{tgt_name}", {P});\n'
-    #             break
 
 PATH = os.path.join("autoMDP.ts")
 with open(PATH, "w") as f:
